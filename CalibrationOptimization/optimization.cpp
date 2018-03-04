@@ -12,8 +12,8 @@ using namespace std;
 
 
 const Size board_size = Size(9, 6);
-const string IN_PATH = "D:\\æ¯•ä¸šè®¾è®¡\\å›¾æ¼¾ç¬¬äºŒæ¬¡æ ‡å®šæ•°æ®\\";
-const string OUT_PATH = "D:\\æ¯•ä¸šè®¾è®¡\\å›¾æ¼¾ç¬¬äºŒæ¬¡æ ‡å®šæ•°æ®\\out\\";
+const string IN_PATH = "D:\\±ÏÒµÉè¼Æ\\Í¼ÑúµÚ¶ş´Î±ê¶¨Êı¾İ\\";
+const string OUT_PATH = "D:\\±ÏÒµÉè¼Æ\\Í¼ÑúµÚ¶ş´Î±ê¶¨Êı¾İ\\out\\";
 const int CAMERA_NUM = 11;
 const int MAX_IMAGE_NUM = 11;
 vector< vector<Mat>> _D_VIEW;
@@ -37,12 +37,19 @@ void output_all_point_and_loss(
 	const vector<Mat_<float>> intrinsic, const vector<Mat_<float>> camera_pos,
 	const vector<Mat_<float>> pose_timestamp, const vector<Mat_<float>> distortion,
 	const vector<vector<vector<double>>> S_Si, const vector<Point3d> object,
-	const string ss1 = OUT_PATH + "åå‘æŠ•å½±ç‚¹äº‘____________________.txt",
-	const string ss2 = OUT_PATH + "åå‘æŠ•å½±ï¼ˆç”±åƒç´ ç‚¹åˆ°ç‰©ä½“åæ ‡ç‚¹ï¼‰.txt",
-	const string ss3 = OUT_PATH + "__é‡æŠ•å½±ï¼ˆç”±ç‰©ä½“åæ ‡ç‚¹åˆ°åƒç´ ç‚¹ï¼‰.txt",
+	const string ss1 = OUT_PATH + "·´ÏòÍ¶Ó°µãÔÆ____________________.txt",
+	const string ss2 = OUT_PATH + "·´ÏòÍ¶Ó°£¨ÓÉÏñËØµãµ½ÎïÌå×ø±êµã£©.txt",
+	const string ss3 = OUT_PATH + "__ÖØÍ¶Ó°£¨ÓÉÎïÌå×ø±êµãµ½ÏñËØµã£©.txt",
 	const bool is_have_si = true
 	);
-bool get_s0_s1(vector<double> & s_0, vector<double> & s_1, vector<Point3f> observe0, vector<Point3f> observe1, Mat k0_inv, Mat k1_inv, Mat camera_pos);
+
+
+bool triangulation(vector<double> & s_0, vector<double> & s_1,
+	const vector<Point3f> & observe0, const vector<Point3f> & observe1,
+	const Mat & K0, const Mat & K1,
+	const Mat & R
+	);
+bool get_s0_s1(vector<double> & s_0, vector<double> & s_1, vector<Point3f> observe0, vector<Point3f> observe1, Mat K0, Mat K1, Mat camera_pos);
 void get_all_corner_point(vector < vector < vector < Point3f > > > & all_observe, Size board_size);
 void calcChessboardCorners(Size boardSize, double squareSize, vector<Point3d> & corners);
 
@@ -58,7 +65,7 @@ bool writeImage(Mat image, int _i, int _j, int _k = 0, string path = OUT_PATH, s
 bool matrix_2_array(const Mat_<float> mat, double arr[], const int arr_row, const int arr_col);
 bool array_2_matrix(Mat_<float> & mat, const double arr[], const int arr_row, const int arr_col);
 
-bool out_all_point(const vector < vector < vector < Point3f > > > & all_observe, const string ss1 = OUT_PATH + "æ£‹ç›˜æ ¼è§’ç‚¹.txt");
+bool out_all_point(const vector < vector < vector < Point3f > > > & all_observe, const string ss1 = OUT_PATH + "ÆåÅÌ¸ñ½Çµã.txt");
 
 template<typename T>
 bool matrix_multiply(const T src1[], const T src2[], T des[], int src1_row, int src1_col, int src2_row, int src2_col)
@@ -228,7 +235,7 @@ struct ReprojectionError {
 
 		T x, y;
 		x = reprojection_point[0] / reprojection_point[2];
-		y = reprojection_point[1] / reprojection_point[2];//å½’ä¸€åŒ–åæ ‡
+		y = reprojection_point[1] / reprojection_point[2];//¹éÒ»»¯×ø±ê
 
 		T r2 = x * x + y * y;
 		T k_p = T(1.0) + distortion[0] * r2 + distortion[1] * r2 * r2 + distortion[2] * r2 * r2 * r2;
@@ -311,14 +318,14 @@ int main(int argc, char * argv[])
 	camera_pos.clear(), pose_timestamp.clear(), distortion, intrinsic.clear();
 	optimized_camera_pos.clear(), optimized_pose_timestamp.clear(), optimized_distortion.clear(), optimized_intrinsic.clear();
 
-	//è¯»å…¥å‚æ•°
+	//¶ÁÈë²ÎÊı
 	readParams(IN_PATH + "cameras_intrinsic_parameters1.xml",
 		intrinsic, Size(3, 3), "K_", distortion, Size(1, 5), "DISTORTION_");
 	readParams(IN_PATH + "multi-extrinsic-results1.xml",
 		camera_pos, Size(4, 4), "camera_pose_", pose_timestamp, Size(4, 4), "pose_timestamp_");
 
-	//è¯»å…¥æ£‹ç›˜æ ¼æ‰€æœ‰çš„è§’ç‚¹
-	vector < vector < vector < Point3f > > > all_observe; //zç”¨ä½œæ˜¯å¦å‚ä¸è¿ç®—çš„flag
+	//¶ÁÈëÆåÅÌ¸ñËùÓĞµÄ½Çµã
+	vector < vector < vector < Point3f > > > all_observe; //zÓÃ×÷ÊÇ·ñ²ÎÓëÔËËãµÄflag
 	all_observe.clear();
 	Size board_size = Size(9, 6);
 	get_all_corner_point(all_observe, board_size);
@@ -329,10 +336,10 @@ int main(int argc, char * argv[])
 	double squareSize = 50;
 	calcChessboardCorners(board_size, squareSize, object);
 
-	Mat k0_inv = intrinsic[0].inv();
+	Mat K0 = intrinsic[0];
 	vector< vector< vector <double> > > S_Si, S_S0;
 	S_Si.clear(), S_S0.clear();
-	//æ±‚å‡ºsi
+	//Çó³ösi
 	for (int camera_i = 1; camera_i < all_observe.size(); camera_i++) //(0,1),(0,2),...,(0,10)
 	{
 		vector< vector<double> > s_0, s_1;
@@ -340,11 +347,14 @@ int main(int argc, char * argv[])
 
 		for (int image_j = 0; image_j < all_observe[camera_i].size(); image_j++) {
 
-			Mat k1_inv = intrinsic[camera_i].inv();
+			Mat K1 = intrinsic[camera_i];
 			vector<double> tmp_s0, tmp_s1;
 			tmp_s0.clear();
 			tmp_s1.clear();
-			get_s0_s1(tmp_s0, tmp_s1, all_observe[0][image_j], all_observe[camera_i][image_j], k0_inv, k1_inv, camera_pos[camera_i]);
+			//ÁãÖµÈı½Ç²âÁ¿
+			//get_s0_s1(tmp_s0, tmp_s1, all_observe[0][image_j], all_observe[camera_i][image_j], K0, K1, camera_pos[camera_i]);
+			//×îĞ¡¶ş³ËÈı½Ç²âÁ¿
+			triangulation(tmp_s0, tmp_s1, all_observe[0][image_j], all_observe[camera_i][image_j], K0, K1, camera_pos[camera_i]);
 			s_0.push_back(tmp_s0);
 			s_1.push_back(tmp_s1);
 
@@ -354,21 +364,25 @@ int main(int argc, char * argv[])
 
 	}
 
-	S_Si.insert(S_Si.begin() + 0, S_S0[0]);//æ±‚å‡ºSi
+	S_Si.insert(S_Si.begin() + 0, S_S0[0]);//Çó³öSi
 
 	output_all_point_and_loss(all_observe, intrinsic, camera_pos, pose_timestamp, distortion, S_Si, object,
-		OUT_PATH + "ä¼˜åŒ–å‰__åå‘æŠ•å½±ç‚¹äº‘____________________.txt",
-		OUT_PATH + "ä¼˜åŒ–å‰__åå‘æŠ•å½±ï¼ˆç”±åƒç´ ç‚¹åˆ°ç‰©ä½“åæ ‡ç‚¹ï¼‰.txt",
-		OUT_PATH + "ä¼˜åŒ–å‰____é‡æŠ•å½±ï¼ˆç”±ç‰©ä½“åæ ‡ç‚¹åˆ°åƒç´ ç‚¹ï¼‰.txt"); // before optimizating
+		OUT_PATH + "ÓÅ»¯Ç°__·´ÏòÍ¶Ó°µãÔÆ____________________.txt",
+		OUT_PATH + "ÓÅ»¯Ç°__·´ÏòÍ¶Ó°£¨ÓÉÏñËØµãµ½ÎïÌå×ø±êµã£©.txt",
+		OUT_PATH + "ÓÅ»¯Ç°____ÖØÍ¶Ó°£¨ÓÉÎïÌå×ø±êµãµ½ÏñËØµã£©.txt"); // before optimizating
 
-	output_image_point_cloud(all_observe, intrinsic, camera_pos, pose_timestamp, S_Si, OUT_PATH + "å›¾åƒç‚¹äº‘"); // before optimizating
+	output_image_point_cloud(all_observe, intrinsic, camera_pos, pose_timestamp, S_Si, OUT_PATH + "Í¼ÏñµãÔÆ"); // before optimizating
+
+
+
 
 	optimize_all_observe(all_observe, intrinsic, camera_pos, pose_timestamp, S_Si, object); // before optimizating
-
+	
 	output_all_point_and_loss(all_observe, intrinsic, camera_pos, pose_timestamp, distortion, S_Si, object,
-		OUT_PATH + "å»æ‰è¯¯å·®è¾ƒå¤§çš„ç‚¹å__åå‘æŠ•å½±ç‚¹äº‘____________________.txt",
-		OUT_PATH + "å»æ‰è¯¯å·®è¾ƒå¤§çš„ç‚¹å__åå‘æŠ•å½±ï¼ˆç”±åƒç´ ç‚¹åˆ°ç‰©ä½“åæ ‡ç‚¹ï¼‰.txt",
+		OUT_PATH + "È¥µôÎó²î½Ï´óµÄµãºó__·´ÏòÍ¶Ó°µãÔÆ____________________.txt",
+		OUT_PATH + "È¥µôÎó²î½Ï´óµÄµãºó__·´ÏòÍ¶Ó°£¨ÓÉÏñËØµãµ½ÎïÌå×ø±êµã£©.txt",
 		""); // before optimizating
+
 
 
 	double d_intrinsic[CAMERA_NUM][3 * 3];
@@ -376,14 +390,14 @@ int main(int argc, char * argv[])
 	double d_pose_timestamp[CAMERA_NUM][4 * 4];
 	double d_distortion[CAMERA_NUM][5];
 
-	//é‡æŠ•å½±ä¼˜åŒ–K, camera_pos, pose_timestamp
+	//ÖØÍ¶Ó°ÓÅ»¯K, camera_pos, pose_timestamp
 	ceres::Problem reprojection_problem;
 
 	for (int camera_i = 0; camera_i < all_observe.size(); camera_i++) {
 
 		matrix_2_array(intrinsic[camera_i], d_intrinsic[camera_i], 3, 3);
 		matrix_2_array(camera_pos[camera_i], d_camera_pos[camera_i], 4, 4);
-		matrix_2_array(distortion[camera_i], d_distortion[camera_i], 5, 1);
+		matrix_2_array(distortion[camera_i], d_distortion[camera_i], 1, 5);
 
 		for (int image_j = 0; image_j < all_observe[camera_i].size(); image_j++) {
 
@@ -406,7 +420,7 @@ int main(int argc, char * argv[])
 	ceres::Solve(reprojection_options, &reprojection_problem, &reprojection_summary);
 	fcout << "\n\n" << reprojection_summary.FullReport() << "\n";
 
-	//doubleæ•°ç»„è½¬åŒ–ä¸ºçŸ©é˜µ
+	//doubleÊı×é×ª»¯Îª¾ØÕó
 	optimized_camera_pos.clear(), optimized_pose_timestamp.clear(), optimized_distortion.clear(), optimized_intrinsic.clear();
 	for (int i = 0; i < CAMERA_NUM; i++) {
 		Mat_<float> t_intrinsic(intrinsic[i].rows, intrinsic[i].cols);
@@ -416,7 +430,7 @@ int main(int argc, char * argv[])
 		array_2_matrix(t_intrinsic, d_intrinsic[i], 3, 3);
 		array_2_matrix(t_camera_pos, d_camera_pos[i], 4, 4);
 		array_2_matrix(t_pose_timestamp, d_pose_timestamp[i], 4, 4);
-		array_2_matrix(t_distortion, d_distortion[i], 5, 1);
+		array_2_matrix(t_distortion, d_distortion[i], 1, 5);
 
 		optimized_distortion.push_back(t_distortion);
 		optimized_intrinsic.push_back(t_intrinsic);
@@ -426,14 +440,14 @@ int main(int argc, char * argv[])
 
 	output_all_point_and_loss(all_observe, optimized_intrinsic, optimized_camera_pos,
 		optimized_pose_timestamp, optimized_distortion, S_Si, object,
-		"", "", OUT_PATH + "é‡æŠ•å½±ä¼˜åŒ–å____é‡æŠ•å½±ï¼ˆç”±ç‰©ä½“åæ ‡ç‚¹åˆ°åƒç´ ç‚¹ï¼‰.txt"); // after reprojection optimizing
+		"", "", OUT_PATH + "ÖØÍ¶Ó°ÓÅ»¯ºó____ÖØÍ¶Ó°£¨ÓÉÎïÌå×ø±êµãµ½ÏñËØµã£©.txt"); // after reprojection optimizing
 
 	writeParams(OUT_PATH + "reprojection_cameras_intrinsic_parameters.xml", optimized_intrinsic, "K_", optimized_distortion, "DISTORTION_");
 	writeParams(OUT_PATH + "reprojection_multi-extrinsic-results.xml", optimized_camera_pos, "camera_pose_", optimized_pose_timestamp, "pose_timestamp_");
 
 
 
-	//åå‘æŠ•å½±ä¼˜åŒ–,è¯¯å·®å–åˆ°xoyå¹³é¢çš„è·ç¦»ï¼ŒK, camera_pos, pose_timestamp
+	//·´ÏòÍ¶Ó°ÓÅ»¯,Îó²îÈ¡µ½xoyÆ½ÃæµÄ¾àÀë£¬K, camera_pos, pose_timestamp
 	ceres::Problem xoy_distance_problem;	//2880
 	for (int camera_i = 0; camera_i < all_observe.size(); camera_i++) {
 
@@ -446,7 +460,7 @@ int main(int argc, char * argv[])
 
 			if (S_Si[camera_i][image_j].size() > 0) {
 				for (int k = 0; k < all_observe[camera_i][image_j].size(); k++) {
-					bool flag = all_observe[camera_i][image_j][k].z;//æ˜¯å¦å‚ä¸è®¡ç®—
+					bool flag = all_observe[camera_i][image_j][k].z;//ÊÇ·ñ²ÎÓë¼ÆËã
 					if (flag) {
 						ceres::CostFunction * cost_function = XOYDistanceError::Create(all_observe[camera_i][image_j][k], object[k], S_Si[camera_i][image_j][k]);
 						xoy_distance_problem.AddResidualBlock(
@@ -465,7 +479,7 @@ int main(int argc, char * argv[])
 	ceres::Solve(xoy_distance_options, &xoy_distance_problem, &xoy_distance_summary);
 	fcout << "\n\n" << xoy_distance_summary.FullReport() << "\n";
 
-	//doubleæ•°ç»„è½¬åŒ–ä¸ºçŸ©é˜µ
+	//doubleÊı×é×ª»¯Îª¾ØÕó
 	optimized_camera_pos.clear(), optimized_pose_timestamp.clear(), optimized_intrinsic.clear();
 	for (int i = 0; i < CAMERA_NUM; i++) {
 		Mat_<float> t_intrinsic(intrinsic[i].rows, intrinsic[i].cols);
@@ -483,14 +497,14 @@ int main(int argc, char * argv[])
 
 	output_all_point_and_loss(all_observe, optimized_intrinsic, optimized_camera_pos,
 		optimized_pose_timestamp, optimized_distortion, S_Si, object,
-		OUT_PATH + "è¯¯å·®å–åˆ°xoyå¹³é¢çš„è·ç¦»__åå‘æŠ•å½±ä¼˜åŒ–å__åå‘æŠ•å½±ç‚¹äº‘____________________.txt",
-		OUT_PATH + "è¯¯å·®å–åˆ°xoyå¹³é¢çš„è·ç¦»__åå‘æŠ•å½±ä¼˜åŒ–å__åå‘æŠ•å½±ï¼ˆç”±åƒç´ ç‚¹åˆ°ç‰©ä½“åæ ‡ç‚¹ï¼‰.txt", ""); // before optimizating
+		OUT_PATH + "Îó²îÈ¡µ½xoyÆ½ÃæµÄ¾àÀë__·´ÏòÍ¶Ó°ÓÅ»¯ºó__·´ÏòÍ¶Ó°µãÔÆ____________________.txt",
+		OUT_PATH + "Îó²îÈ¡µ½xoyÆ½ÃæµÄ¾àÀë__·´ÏòÍ¶Ó°ÓÅ»¯ºó__·´ÏòÍ¶Ó°£¨ÓÉÏñËØµãµ½ÎïÌå×ø±êµã£©.txt", ""); // before optimizating
 
 	writeParams(OUT_PATH + "xoy_distance_summary_cameras_intrinsic_parameters.xml", optimized_intrinsic, "K_", optimized_distortion, "DISTORTION_");
 	writeParams(OUT_PATH + "xoy_distance_summary_multi-extrinsic-results.xml", optimized_camera_pos, "camera_pose_", optimized_pose_timestamp, "pose_timestamp_");
 
 
-	////åå‘æŠ•å½±ä¼˜åŒ–K, camera_pos, pose_timestamp
+	////·´ÏòÍ¶Ó°ÓÅ»¯K, camera_pos, pose_timestamp
 	ceres::Problem reverse_projection_problem;	//2880
 	for (int camera_i = 0; camera_i < all_observe.size(); camera_i++){
 
@@ -503,7 +517,7 @@ int main(int argc, char * argv[])
 
 			if (S_Si[camera_i][image_j].size() > 0){
 				for (int k = 0; k < all_observe[camera_i][image_j].size(); k++){
-					bool flag = all_observe[camera_i][image_j][k].z;//æ˜¯å¦å‚ä¸è®¡ç®—
+					bool flag = all_observe[camera_i][image_j][k].z;//ÊÇ·ñ²ÎÓë¼ÆËã
 					if (flag){
 						ceres::CostFunction * cost_function = ReverseProjectionError::Create(all_observe[camera_i][image_j][k], object[k], S_Si[camera_i][image_j][k]);
 						reverse_projection_problem.AddResidualBlock(
@@ -522,7 +536,7 @@ int main(int argc, char * argv[])
 	ceres::Solve(reverse_projection_options, &reverse_projection_problem, &reverse_projection_summary);
 	fcout << "\n\n" << reverse_projection_summary.FullReport() << "\n";
 
-	//doubleæ•°ç»„è½¬åŒ–ä¸ºçŸ©é˜µ
+	//doubleÊı×é×ª»¯Îª¾ØÕó
 	optimized_camera_pos.clear(), optimized_pose_timestamp.clear(), optimized_intrinsic.clear();
 	for (int i = 0; i < CAMERA_NUM; i++) {
 		Mat_<float> t_intrinsic(intrinsic[i].rows, intrinsic[i].cols);
@@ -540,8 +554,8 @@ int main(int argc, char * argv[])
 
 	output_all_point_and_loss(all_observe, optimized_intrinsic, optimized_camera_pos,
 		optimized_pose_timestamp, optimized_distortion, S_Si, object,
-		OUT_PATH + "åå‘æŠ•å½±ä¼˜åŒ–å__åå‘æŠ•å½±ç‚¹äº‘____________________.txt",
-		OUT_PATH + "åå‘æŠ•å½±ä¼˜åŒ–å__åå‘æŠ•å½±ï¼ˆç”±åƒç´ ç‚¹åˆ°ç‰©ä½“åæ ‡ç‚¹ï¼‰.txt", ""); // before optimizating
+		OUT_PATH + "·´ÏòÍ¶Ó°ÓÅ»¯ºó__·´ÏòÍ¶Ó°µãÔÆ____________________.txt",
+		OUT_PATH + "·´ÏòÍ¶Ó°ÓÅ»¯ºó__·´ÏòÍ¶Ó°£¨ÓÉÏñËØµãµ½ÎïÌå×ø±êµã£©.txt", ""); // before optimizating
 
 	writeParams(OUT_PATH + "reverse_projection_cameras_intrinsic_parameters.xml", optimized_intrinsic, "K_", optimized_distortion, "DISTORTION_");
 	writeParams(OUT_PATH + "reverse_projection_multi-extrinsic-results.xml", optimized_camera_pos, "camera_pose_", optimized_pose_timestamp, "pose_timestamp_");
@@ -593,13 +607,13 @@ void output_image_point_cloud(
 
 			for (int k = 0; k < all_observe[Camera_i][image_j].size(); k++) {
 
-				//åå‘æŠ•å½±
+				//·´ÏòÍ¶Ó°
 				if (is_have_si) {
 					if (S_Si[Camera_i][image_j].size() <= 0) {
 						continue;
 					}
 				}
-				bool flag = all_observe[Camera_i][image_j][k].z;//æ˜¯å¦å‚ä¸è®¡ç®—
+				bool flag = all_observe[Camera_i][image_j][k].z;//ÊÇ·ñ²ÎÓë¼ÆËã
 				if (flag) {
 					Mat tmp_image_point(4, 1, CV_MAKE_TYPE(CV_32FC1, 1));
 					tmp_image_point.at<float>(0, 0) = S_Si[Camera_i][image_j][k] * all_observe[Camera_i][image_j][k].x;
@@ -670,7 +684,7 @@ void optimize_all_observe(
 			for (int k = 0; k < all_observe[Camera_i][image_j].size(); k++) {
 
 
-				//åå‘æŠ•å½±
+				//·´ÏòÍ¶Ó°
 				Mat tmp_image_point(4, 1, CV_MAKE_TYPE(CV_32FC1, 1));
 				tmp_image_point.at<float>(0, 0) = S_Si[Camera_i][image_j][k] * all_observe[Camera_i][image_j][k].x;
 				tmp_image_point.at<float>(1, 0) = S_Si[Camera_i][image_j][k] * all_observe[Camera_i][image_j][k].y;
@@ -714,17 +728,17 @@ bool out_all_point(const vector < vector < vector < Point3f > > > & all_observe,
 	int flag_cnt = 0;
 	for (int _i = 0; _i < all_observe.size(); _i++)
 	{
-		fs1 << "\n\n\n\n\nç¬¬" << _i << "ä¸ªç›¸æœºï¼š\n";
+		fs1 << "\n\n\n\n\nµÚ" << _i << "¸öÏà»ú£º\n";
 
 		for (int _j = 0; _j < all_observe[_i].size(); _j++) {
 
-			fs1 << "\n\tç¬¬" << _j << "å¼ å›¾ç‰‡ï¼š\n";
+			fs1 << "\n\tµÚ" << _j << "ÕÅÍ¼Æ¬£º\n";
 
 			for (int k = 0; k < all_observe[_i][_j].size(); k++) {
 				point_cnt++;
 				bool flag = all_observe[_i][_j][k].z;
 				if (!flag)
-					flag_cnt++;//å¦‚æœflagä¸ºfalse,åˆ™è®°å½•ä¸å‚ä¸è®¡ç®—çš„ç‚¹çš„ä¸ªæ•°
+					flag_cnt++;//Èç¹ûflagÎªfalse,Ôò¼ÇÂ¼²»²ÎÓë¼ÆËãµÄµãµÄ¸öÊı
 				fs1 << "\t" << k << ",\tx: " << all_observe[_i][_j][k].x
 					<< ",\ty: " << all_observe[_i][_j][k].y
 					<< ",\tz(flag): " << all_observe[_i][_j][k].z << endl;
@@ -732,9 +746,9 @@ bool out_all_point(const vector < vector < vector < Point3f > > > & all_observe,
 
 		}
 	}
-	fs1 << "\n\næ€»å…±: " << point_cnt << "ç‚¹\n";
-	fs1 << "\n\nä¸å‚ä¸è®¡ç®—çš„æœ‰: " << flag_cnt << "ç‚¹\n";
-	fs1 << "\n\nå‚ä¸è®¡ç®—çš„æœ‰: " << (point_cnt - flag_cnt) << "ç‚¹\n";
+	fs1 << "\n\n×Ü¹²: " << point_cnt << "µã\n";
+	fs1 << "\n\n²»²ÎÓë¼ÆËãµÄÓĞ: " << flag_cnt << "µã\n";
+	fs1 << "\n\n²ÎÓë¼ÆËãµÄÓĞ: " << (point_cnt - flag_cnt) << "µã\n";
 	return true;
 }
 
@@ -802,7 +816,7 @@ void get_all_corner_point(vector < vector < vector < Point3f > > > & all_observe
 				observe.clear();
 			}
 			for (int i = 0; i < observe.size(); i++) {
-				Point3f pnt(observe[i].x, observe[i].y, true); //zç”¨æ¥ä½œä¸ºåˆ¤æ–­,flagå˜é‡
+				Point3f pnt(observe[i].x, observe[i].y, true); //zÓÃÀ´×÷ÎªÅĞ¶Ï,flag±äÁ¿
 				observe3f.push_back(pnt);
 			}
 			observe_s_j.push_back(observe3f);
@@ -844,16 +858,16 @@ void output_all_point_and_loss(
 	double sum_loss1 = 0.0, half_sum_loss1 = 0.0;
 	for (int Camera_i = 0; Camera_i < all_observe.size(); Camera_i++) {
 
-		fs2 << "\n\n\n\n\nç¬¬" << Camera_i << "ä¸ªç›¸æœºï¼š\n";
-		fs3 << "\n\n\n\n\nç¬¬" << Camera_i << "ä¸ªç›¸æœºï¼š\n";
+		fs2 << "\n\n\n\n\nµÚ" << Camera_i << "¸öÏà»ú£º\n";
+		fs3 << "\n\n\n\n\nµÚ" << Camera_i << "¸öÏà»ú£º\n";
 
 		double sum_reprojection_loss2 = 0.0, half_sum_reprojection_loss2 = 0.0;
 		double sum_loss2 = 0.0, half_sum_loss2 = 0.0;
 
 		for (int image_j = 0; image_j < all_observe[Camera_i].size(); image_j++) {
 
-			fs2 << "\n\tç¬¬" << image_j << "å¼ å›¾ç‰‡ï¼š\n";
-			fs3 << "\n\tç¬¬" << image_j << "å¼ å›¾ç‰‡ï¼š\n";
+			fs2 << "\n\tµÚ" << image_j << "ÕÅÍ¼Æ¬£º\n";
+			fs3 << "\n\tµÚ" << image_j << "ÕÅÍ¼Æ¬£º\n";
 
 #ifdef _DEBUG
 			Mat _D_02 = pose_timestamp[Camera_i];
@@ -892,7 +906,7 @@ void output_all_point_and_loss(
 				Mat _D_03 = _D_VIEW[Camera_i][image_j];
 #endif // _DEBUG
 
-				//é‡æŠ•å½±
+				//ÖØÍ¶Ó°
 				Mat tmp_object_point(4, 1, CV_MAKE_TYPE(CV_32FC1, 1));
 				tmp_object_point.at<float>(0, 0) = object[k].x;
 				tmp_object_point.at<float>(1, 0) = object[k].y;
@@ -907,11 +921,12 @@ void output_all_point_and_loss(
 				double y = reprojection_point.y = possible_pixel_point.at<float>(1, 0) / possible_pixel_point.at<float>(2, 0);
 				reprojection_point.z = possible_pixel_point.at<float>(2, 0);
 
+				//Mat KKKKKKKKK = distortion[Camera_i];
 				double k1 = distortion[Camera_i].at<float>(0, 0);
-				double k2 = distortion[Camera_i].at<float>(1, 0);
-				double k3 = distortion[Camera_i].at<float>(2, 0);
-				double p1 = distortion[Camera_i].at<float>(3, 0);
-				double p2 = distortion[Camera_i].at<float>(4, 0);
+				double k2 = distortion[Camera_i].at<float>(0, 1);
+				double k3 = distortion[Camera_i].at<float>(0, 2);
+				double p1 = distortion[Camera_i].at<float>(0, 3);
+				double p2 = distortion[Camera_i].at<float>(0, 4);
 				
 				double r2 = x * x + y * y;
 
@@ -935,13 +950,13 @@ void output_all_point_and_loss(
 				fs3 << "\t" << k << ",\tx: " << reprojection_point.x << ",\ty: " << reprojection_point.y << ",\tz(hold,may be si): " << reprojection_point.z << endl;
 
 
-				//åå‘æŠ•å½±
+				//·´ÏòÍ¶Ó°
 				if (is_have_si) {
 					if (S_Si[Camera_i][image_j].size() <= 0) {
 						continue;
 					}
 				}
-				bool flag = all_observe[Camera_i][image_j][k].z;//æ˜¯å¦å‚ä¸è®¡ç®—
+				bool flag = all_observe[Camera_i][image_j][k].z;//ÊÇ·ñ²ÎÓë¼ÆËã
 				if (flag) {
 					Mat tmp_image_point(4, 1, CV_MAKE_TYPE(CV_32FC1, 1));
 					tmp_image_point.at<float>(0, 0) = S_Si[Camera_i][image_j][k] * all_observe[Camera_i][image_j][k].x;
@@ -986,8 +1001,13 @@ void output_all_point_and_loss(
 			Mat image = readImage(0, Camera_i, image_j);
 			if (image.empty())
 				continue;
-			cv::drawChessboardCorners(image, board_size, vec_reprojection, true);
-			writeImage(image, 0, Camera_i, image_j, OUT_PATH + "image\\", "_reprojection.png");
+			cv::drawChessboardCorners(image, board_size, vec_reprojection, true);		
+			string ssstr = "";
+			if (OUT_PATH.size() > ss2.size() - 1 || ss2.size() < OUT_PATH.size())
+				ssstr = "";
+			else
+				ss2.substr(OUT_PATH.size(), ss2.size() - OUT_PATH.size());
+			writeImage(image, 0, Camera_i, image_j, OUT_PATH + "image\\", ssstr + "_reprojection.png");
 		}
 		sum_loss1 = sum_loss1 + sum_loss2;
 		half_sum_loss1 = half_sum_loss1 + half_sum_loss2;
@@ -1056,7 +1076,7 @@ bool readParams(string path, vector<Mat_<float>> & vec1, Size size1, string flag
 void calcChessboardCorners(Size boardSize, double squareSize, vector<Point3d> & corners)
 {
 	corners.resize(0);
-	for (int i = 0; i < boardSize.height; i++) {     //heightå’Œwidthä½ç½®ä¸èƒ½é¢ å€’
+	for (int i = 0; i < boardSize.height; i++) {     //heightºÍwidthÎ»ÖÃ²»ÄÜµßµ¹
 		for (int j = 0; j < boardSize.width; j++) {
 			corners.push_back(Point3d(j*squareSize, i*squareSize, 0));
 		}
@@ -1095,9 +1115,79 @@ bool writeImage(Mat image, int _i, int _j, int _k, string path, string suffix, s
 	return imwrite(filename.str(), image);
 }
 
+Point2d pixel2cam(Point2d pix_pnt, Mat K)
+{
+	Mat pnt = (Mat_<float>(3, 1) << pix_pnt.x, pix_pnt.y, 1.0);
+	Mat cam_pnt = K.inv() * pnt;
+	Point2d pt;
+	pt.x = cam_pnt.at<float>(0, 0);
+	pt.y = cam_pnt.at<float>(1, 0);
+	return pt;
+}
+
+Point3d cam1_to_cam2(Point3d pnt, Mat_<double> R)
+{
+	Mat m_pnt = (Mat_<double>(4, 1) << pnt.x, pnt.y, pnt.z, 1.0);
+	Mat cam_pnt = R * m_pnt;
+	Point3d pt;
+	pt.x = cam_pnt.at<double>(0, 0);
+	pt.y = cam_pnt.at<double>(1, 0);
+	pt.z = cam_pnt.at<double>(2, 0);
+	return pt;
+}
+
+bool triangulation(vector<double> & s_0, vector<double> & s_1,
+	const vector<Point3f> & observe0, const vector<Point3f> & observe1,
+	const Mat & K0, const Mat & K1,
+	const Mat & R
+	)
+{
+	s_0.clear(),s_1.clear();
+	if (observe0.size() != observe1.size() || observe0.size() <= 0 || observe1.size() <= 0)
+		return false;
+	vector<Point2d> pts_1, pts_2;
+	for (int i = 0; i < observe0.size(); i++){
+		Point2d pn0(observe0[i].x, observe0[i].y);
+		Point2d pn1(observe1[i].x, observe1[i].y);
+		pts_1.push_back(pixel2cam(pn0, K0));
+		pts_2.push_back(pixel2cam(pn1, K1));
+	}
+
+	Mat T1 = (Mat_<double>(3, 4) <<
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0);
+	Mat T2 = (Mat_<double>(3, 4) <<
+		R.at<float>(0, 0), R.at<float>(0, 1), R.at<float>(0, 2), R.at<float>(0, 3),
+		R.at<float>(1, 0), R.at<float>(1, 1), R.at<float>(1, 2), R.at<float>(1, 3),
+		R.at<float>(2, 0), R.at<float>(2, 1), R.at<float>(2, 2), R.at<float>(2, 3)
+		);
+
+	Mat pts_4d;
+	cv::triangulatePoints(T1,T2,pts_1,pts_2,pts_4d);
+	vector<Point3d> points0,points1;
+	for (int i = 0; i < pts_4d.cols; i++){
+		Mat x = pts_4d.col(i);
+		x /= x.at<double>(3, 0);
+		Point3d p(
+			x.at<double>(0, 0),
+			x.at<double>(1, 0),
+			x.at<double>(2, 0)
+			);
+		Point3d p1 = cam1_to_cam2(p, T2);
+		points0.push_back(p);
+		points1.push_back(p1);
+		s_0.push_back(p.z);
+		s_1.push_back(p1.z);
+	}
+
+	return true;
+}
+
+
 bool get_s0_s1(vector<double> & s_0, vector<double> & s_1,
 	vector<Point3f> observe0, vector<Point3f> observe1,
-	Mat k0_inv, Mat k1_inv,
+	Mat K0, Mat K1,
 	Mat camera_pos
 	)
 {
@@ -1111,14 +1201,14 @@ bool get_s0_s1(vector<double> & s_0, vector<double> & s_1,
 		observe0_point.at<float>(0, 0) = observe0[j].x;
 		observe0_point.at<float>(1, 0) = observe0[j].y;
 		observe0_point.at<float>(2, 0) = 1.0f;
-		position0 = k0_inv * observe0_point;
+		position0 = K0.inv() * observe0_point;
 
 		Mat position1(3, 1, CV_32FC1);
 		Mat observe1_point(3, 1, CV_32FC1);
 		observe1_point.at<float>(0, 0) = observe1[j].x;
 		observe1_point.at<float>(1, 0) = observe1[j].y;
 		observe1_point.at<float>(2, 0) = 1.0f;
-		position1 = k1_inv * observe1_point;
+		position1 = K1.inv() * observe1_point;
 
 		double s0, s1, s01, s02, s11, s12;
 		double x0 = position0.at<float>(0, 0);
