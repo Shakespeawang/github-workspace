@@ -206,6 +206,8 @@ string getHtmlTag(const string html, const string tags, const string restricts, 
 {
 	string ret_str = "";
 	for (int i = 0; i < html.length();) {
+
+out_cicle:
 		string tagCode = getTag(tags, html, &i);
 		if (out_tags == _HTML)
 			return tagCode;
@@ -240,7 +242,7 @@ string getHtmlTag(const string html, const string tags, const string restricts, 
 					}
 					string value = getTagValue(str, obj);
 					if (value != obj_val)
-						return "";
+						goto out_cicle;
 					if (isBreak){
 						return getTagValue(str, out_tags);
 					}
