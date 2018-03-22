@@ -14,7 +14,7 @@ void help()
 int main(int argc, char * argv[])
 {
 	/*int argc = 4;
-	char * argv[] = { "get_html_tags2", "-f", "D:\\curl-workspace\\zuidaima\\login_index.html", "select inner_text from div where class='content'"};
+	char * argv[] = { "get_html_tags2", "-f", "D:\\test\\1.html", "select inner_text from a"};
 */
 	try {
 		if (argc < 2)

@@ -69,7 +69,7 @@ int find_tag_end_pos(string html, int start, string tags)
 		if (-1 != p3 && p3 < found){
 			//cout << html.substr(p3, tags.length() + 20) << endl;
 			cnt--;
-			found = p3;
+			found = p3 + tags.length() + 3;
 			if (cnt <= 0)
 				break;
 		}
@@ -102,7 +102,9 @@ bool match_need(string scheck, string conditions)
 	}
 
 	string str = conditions.substr(pos, conditions.length() - pos);
-	if (-1 == scheck.find(str))
+	if ("inner_text" == str)
+		return true;
+	else if (-1 == scheck.find(str))
 		return false;
 	else
 		return true;
@@ -174,12 +176,14 @@ vector<vector<string>> get_target_value(vector<string> target, vector<string> co
 			if ("inner_text" == condition[i]){
 				int pos1 = str.find(">", 0);
 				int pos2 = str.find_last_of("</");
-				str.erase(pos2 - 1, str.length() - pos2 - 1);
+				str.erase(pos2 - 1, str.length() - (pos2 - 1));
 				str.erase(0, pos1 + 1);
 
 				pos1 = str.find("<", 0);
 				pos2 = str.find_last_of(">");
-				str.erase(pos1, pos2 - pos1 + 1);
+				if (-1 != pos1 && -1 != pos2){
+					str.erase(pos1, pos2 - pos1 + 1);
+				}
 				v.push_back(str);
 			}
 			else{
