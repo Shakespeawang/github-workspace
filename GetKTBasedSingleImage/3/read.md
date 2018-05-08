@@ -1,1 +1,2 @@
-#A interface of 
+# Camera Intrinsic, Extrinsic and Distortion Parameter Optimization
+
