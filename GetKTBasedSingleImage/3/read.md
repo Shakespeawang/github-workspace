@@ -10,7 +10,6 @@ List
 
 Test Result
 ------------
-
 No Noise Monitor Environment
 ----------------------------
 True value:
