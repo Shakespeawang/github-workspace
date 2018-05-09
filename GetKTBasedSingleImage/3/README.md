@@ -13,7 +13,7 @@ Test Result
 No Noise Monitor Environment
 ----------------------------
 True value:
-![](./pic/monitor_true.PNG)
+![](./pic/monitor_true.png)
 
 Estimated value:
 ![](./pic/monitor_estimate.png)
