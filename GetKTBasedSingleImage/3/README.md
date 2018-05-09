@@ -13,58 +13,58 @@ Test Result
 No Noise Monitor Environment
 ----------------------------
 True value:
-A picture url of true value.
+![](./pic/monitor_true.png)
 
 Estimated value:
-A picture url of estimated value.
+![](./pic/monitor_estimate.png)
 
 Optimized value:
-A picture url of optimized value.
+![](./pic/monitor_optimize.png)
 
 
 Real Environment
 ----------------------------
 ### 1st image
-source image: 
-A picture url of true value.
+source image:
+![](./pic/1.jpg)
 
 True value:
-A picture url of true value.
+![](./pic/img1_true.png)
 
 Estimated value:
-A picture url of estimated value.
+![](./pic/img1_estimate.png)
 
 Optimized value:
-A picture url of optimized value.
+![](./pic/img1_optimize.png)
 
 
 ### 2nd image
 source image: 
-A picture url of true value.
+![](./pic/2.jpg)
 
 True value:
-A picture url of true value.
+![](./pic/img2_true.png)
 
 Estimated value:
-A picture url of estimated value.
+![](./pic/img2_estimate.png)
 
 Optimized value:
-A picture url of optimized value.
+![](./pic/img2_optimize.png)
 
 
 ### 3rd image
 source image: 
-A picture url of true value.
+![](./pic/3.jpg)
 
 True value:
-A picture url of true value.
+![](./pic/img3_true.png)
 
 Estimated value:
-A picture url of estimated value.
+![](./pic/img3_estimate.png)
 
 Optimized value:
-A picture url of optimized value.
+![](./pic/img3_optimize.png)
 
 # Summary
-From the test result, we can get the almost perfect estimated value and optimized value in the no noise monitor environment, meanwhile, we can merely get good estimated value and optimized value when the target points close to the principal point were enough.
+From the test result, we can get the almost perfect estimated value but not good optimized value in the no noise monitor environment. Meanwhile, we got the bad estimated value and optimized value in 1st image and the not good estimated value and optimized value but the good estimated value and optimized value. Thus, we can merely get good estimated value and optimized value when the target points close to the principal point were enough.
 
