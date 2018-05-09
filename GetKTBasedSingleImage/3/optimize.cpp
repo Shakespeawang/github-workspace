@@ -175,7 +175,9 @@ void getPrincipalNearbyPoints(std::vector<PairPoint> & prinNearPnts, const std::
 		v.push_back(pt);
 	}
 	sort(v.begin(), v.end(), cmp);
-	const int max_size = v.size() * (rate > 1 ? 1 : rate);
+	double _rate = rate > 1 ? 1 : rate;
+	_rate = _rate * v.size() < 4 ? 4 / v.size() : _rate;
+	const int max_size = v.size() * (_rate);
 	for (size_t i = 0; i < max_size; i++)
 	{
 		prinNearPnts.push_back(pairPoint[(int)v[i].y]);
@@ -192,7 +194,7 @@ void getPrincipalNearbyPoints(std::vector<PairPoint> & prinNearPnts, const std::
 */
 void estimateFocus(cv::Mat & K, const cv::Mat & H, const cv::Point2d prinPnt)
 {
-	double h[3 + 1][3 + 1] = { 0 };
+	/*double h[3 + 1][3 + 1] = { 0 };
 	for (size_t i = 0; i < H.rows; i++)
 	{
 		for (size_t j = 0; j < H.cols; j++)
@@ -225,13 +227,69 @@ void estimateFocus(cv::Mat & K, const cv::Mat & H, const cv::Point2d prinPnt)
 	double _y = (_c[1][1] * _c[2][3] - _c[1][3] * _c[2][1]) / (_c[1][2] * _c[2][1] - _c[1][1] * _c[2][2]);
 
 	double _t = std::sqrt(_x);
-	double _f = std::sqrt(_y) / _t;
+	double _f = std::sqrt(_y) / _t;*/
 
-	K = (cv::Mat_<double>(3, 3) <<
+	/*K = (cv::Mat_<double>(3, 3) <<
 		_f, 0, prinPnt.x,
 		0, _t * _f, prinPnt.y,
 		0, 0, 1
+		);*/
+	
+	cv::Mat H2 = H.t();
+	double h2[3 + 1][3 + 1] = { 0 };
+	for (size_t i = 0; i < H2.rows; i++)
+	{
+		for (size_t j = 0; j < H2.cols; j++)
+		{
+			h2[i + 1][j + 1] = H2.at<double>(i, j);
+		}
+	}
+
+	double V[2 + 1][6 + 1] = { 0 };
+	V[1][1] = h2[1][1] * h2[2][1];
+	V[1][2] = h2[1][1] * h2[2][2] + h2[1][2] * h2[2][1];
+	V[1][3] = h2[1][2] * h2[2][2];
+	V[1][4] = h2[1][3] * h2[2][1] + h2[1][1] * h2[2][3];
+	V[1][5] = h2[1][3] * h2[2][2] + h2[1][2] * h2[2][3];
+	V[1][6] = h2[1][3] * h2[2][3];
+
+	V[2][1] = h2[1][1] * h2[1][1] - h2[2][1] * h2[2][1];
+	V[2][2] = 2 * (h2[1][1] * h2[1][2] - h2[2][1] * h2[2][2]);
+	V[2][3] = h2[1][2] * h2[1][2] - h2[2][2] * h2[2][2];
+	V[2][4] = 2 * (h2[1][1] * h2[1][3] - h2[2][1] * h2[2][3]);
+	V[2][5] = 2 * (h2[1][2] * h2[1][3] - h2[2][2] * h2[2][3]);
+	V[2][6] = h2[1][3] * h2[1][3] - h2[2][3] * h2[2][3];
+	
+	double b[2 + 1][3 + 1] = { 0 };
+	b[1][1] = V[1][1] - V[1][4] * prinPnt.x + V[1][6] * prinPnt.x * prinPnt.x;
+	b[1][2] = V[1][3] - V[1][5] * prinPnt.y + V[1][6] * prinPnt.y * prinPnt.y;
+	b[1][3] = V[1][6];
+	b[2][1] = V[2][1] - V[2][4] * prinPnt.x + V[2][6] * prinPnt.x * prinPnt.x;
+	b[2][2] = V[2][3] - V[2][5] * prinPnt.y + V[2][6] * prinPnt.y * prinPnt.y;
+	b[2][3] = V[2][6];
+
+	cv::Mat A = (cv::Mat_<double>(2, 2) <<
+		V[1][1] - V[1][4] * prinPnt.x + V[1][6] * prinPnt.x * prinPnt.x,
+		V[1][3] - V[1][5] * prinPnt.y + V[1][6] * prinPnt.y * prinPnt.y,
+		V[2][1] - V[2][4] * prinPnt.x + V[2][6] * prinPnt.x * prinPnt.x,
+		V[2][3] - V[2][5] * prinPnt.y + V[2][6] * prinPnt.y * prinPnt.y
 		);
+	cv::Mat B = (cv::Mat_<double>(2, 1) << -V[1][6], -V[2][6]);
+
+	cv::Mat X = (A.t() * A).inv() * A.t() * B;
+	
+	double _x1 = X.at<double>(0, 0);// (b[1][2] * b[2][3] - b[1][3] * b[2][2]) / (b[2][2] * b[1][1] - b[2][1] * b[1][2]);
+	double _y1 = X.at<double>(1, 0);// (b[1][1] * b[2][3] - b[1][3] * b[2][1]) / (b[1][2] * b[2][1] - b[1][1] * b[2][2]);
+	
+	K = (cv::Mat_<double>(3, 3) <<
+	std::sqrt(1 / _x1), 0, prinPnt.x,
+	0, std::sqrt(1 / _y1), prinPnt.y,
+	0, 0, 1
+	);
+
+
+
+
 }
 
 
@@ -260,7 +318,7 @@ void copyPairPoint(const std::vector<PairPoint> & src, std::vector<PairPoint> & 
 void makePerfectImagePoints(std::vector<PairPoint> & pairPoints, const cv::Mat H33, const cv::Size imageSize)
 {
 	//投影
-	for (size_t i = 0; i < pairPoints.size();)
+	for (size_t i = 0; i < pairPoints.size();i++)
 	{
 		cv::Mat W1 = (cv::Mat_<double>(3, 1) << pairPoints[i].worldPoint.x, pairPoints[i].worldPoint.y, 1.0);
 
@@ -270,12 +328,7 @@ void makePerfectImagePoints(std::vector<PairPoint> & pairPoints, const cv::Mat H
 		pts.x = W2.at<double>(0, 0) / W2.at<double>(2, 0);
 		pts.y = W2.at<double>(1, 0) / W2.at<double>(2, 0);
 
-		if (pts.x >= 0 && pts.x < imageSize.width && pts.y >= 0 && pts.y < imageSize.height){
-			pairPoints[i].imagePoint = pts;
-			i++;
-		}
-		else
-			pairPoints.erase(pairPoints.begin() + i);
+		pairPoints[i].imagePoint = pts;
 	}
 }
 
@@ -283,6 +336,7 @@ void makePerfectImagePoints(std::vector<PairPoint> & pairPoints, const cv::Mat H
 
 /*
 *	5)
+*	@status :	deleted.
 *	@function :
 *		matching the perfect points and distorted points in case of the perfect points or distorted points 
 *	is out of the image, in that case erese it.
@@ -297,7 +351,7 @@ void matchPair(std::vector<PairPoint> & perfectPnts, std::vector<PairPoint> & di
 			i++; j++;
 		}
 		else{
-			if (perfectPnts.size()>distortedPnts.size()){
+			if (perfectPnts.size() > distortedPnts.size()){
 				perfectPnts.erase(perfectPnts.begin() + i);
 			}
 			else if (distortedPnts.size() > perfectPnts.size()){
@@ -325,25 +379,23 @@ void estimateDistortion(cv::Mat & D, const std::vector<PairPoint> & perfectPnts,
 	cv::Mat_<double> b(2 * distortedPnts.size(), 1);
 	for (size_t i = 0; i < distortedPnts.size(); i++)
 	{
-		double r2 = pow(perfectPnts[i].imagePoint.x - distortedPnts[i].imagePoint.x, 2) + pow(perfectPnts[i].imagePoint.y - distortedPnts[i].imagePoint.y, 2);
+		double r2 = pow(perfectPnts[i].imagePoint.x - prinPnt.x, 2) + pow(perfectPnts[i].imagePoint.y - prinPnt.y, 2);
 		double du = perfectPnts[i].imagePoint.x - prinPnt.x;
 		double dv = perfectPnts[i].imagePoint.y - prinPnt.y;
 
 		A.at<double>(i * 2 + 0, 0) = du * r2;
 		A.at<double>(i * 2 + 0, 1) = du * r2 * r2;
-		A.at<double>(i * 2 + 0, 2) = 3 * du * du + dv * dv;
-		A.at<double>(i * 2 + 0, 3) = 2 * du * dv;
+		A.at<double>(i * 2 + 0, 2) = 2 * du * dv;
+		A.at<double>(i * 2 + 0, 3) = 3 * du * du + dv * dv;
 
 		A.at<double>(i * 2 + 1, 0) = dv * r2;
 		A.at<double>(i * 2 + 1, 1) = dv * r2 * r2;
-		A.at<double>(i * 2 + 1, 2) = 2 * du * dv;
-		A.at<double>(i * 2 + 1, 3) = du * du + 3 * dv * dv;
+		A.at<double>(i * 2 + 1, 2) = du * du + 3 * dv * dv;
+		A.at<double>(i * 2 + 1, 3) = 2 * du * dv;
 
 		b.at<double>(i * 2 + 0, 0) = distortedPnts[i].imagePoint.x - perfectPnts[i].imagePoint.x;
 		b.at<double>(i * 2 + 1, 0) = distortedPnts[i].imagePoint.y - perfectPnts[i].imagePoint.y;
 	}
-	//cv::Mat S, U, VT;
-	//cv::SVD::compute(A,U,S,VT,SVD::FULL_UV);
 	D = (A.t() * A).inv() * A.t() * b;
 }
 
@@ -491,18 +543,18 @@ void estimateOptimize(std::vector<PairPoint> & pairPoints, const cv::Point2d pri
 	}
 	cv::Mat estimateH = cv::findHomography(A, B); //获取单应矩阵3 x 3
 
-	estimateFocus(estimateK, estimateH, principalPnt); // 获取焦距f和系数t
-
 	std::vector<PairPoint> perfectPnts;
 	copyPairPoint(pairPoints, perfectPnts); //copy
-	makePerfectImagePoints(pairPoints, estimateH, imageSize); //获取理想图像点
-	matchPair(perfectPnts, pairPoints); //理想图像点和畸变图像点做匹配
+	makePerfectImagePoints(perfectPnts, estimateH, imageSize); //获取理想图像点
 
 	estimateDistortion(estimateD, perfectPnts, pairPoints, principalPnt); //获取畸变参数
 
 	estimateD = (cv::Mat_<double>(1, 5) <<
 		estimateD.at<double>(0, 0), estimateD.at<double>(1, 0),
 		estimateD.at<double>(2, 0), estimateD.at<double>(3, 0), 0);
+
+
+	estimateFocus(estimateK, estimateH, principalPnt); // 获取焦距f和系数t
 
 	cv::Mat T33 = estimateK.inv() * estimateH;
 

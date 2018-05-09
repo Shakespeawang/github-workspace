@@ -34,16 +34,22 @@ void help(){
 void monitorTest()
 {
 	Mat K = (Mat_<double>(3, 3) <<
-		1000, 0, 800,
+		1000, 0, 400,
 		0, 800, 300,
 		0, 0, 1);
-	Mat D = (Mat_<double>(1, 5) << 1e-3, 1e-4, 1e-5, 1e-6, 0);
+	Mat D = (Mat_<double>(1, 5) << 1e-6, 1e-12, 0, 0, 0);
+	/*Mat T1 = (Mat_<double>(3, 3) <<
+		1, 0, 0,
+		0, 1, 0,
+		0, 0, 1
+		);*/
 	Mat T1 = (Mat_<double>(3, 3) <<
 		8.12486336e-002, - 7.45385349e-001, 6.61664069e-001, 
 		9.94988263e-001, 9.94789228e-002, - 1.01128444e-002,
 		- 5.82836643e-002, 6.59169674e-001, 7.49732196e-001
 		);
 
+	//double t[3] = { 0, 0, 0 };
 	double t[3] = { 1.42059540e+002, -6.71977615e+001, 1.40762988e+003 };
 	Mat T = (Mat_<double>(3, 4) <<
 		T1.at<double>(0, 0), T1.at<double>(0, 1), T1.at<double>(0, 2), t[0],
@@ -58,7 +64,7 @@ void monitorTest()
 
 	Mat optiK, optiT, optiD, estimateK, estimateT, estimateD;
 
-	estimateOptimize(pairPoints, principalPnt, Size(principalPnt.x * 2, principalPnt.y * 2), optiK, optiT, optiD, estimateK, estimateT, estimateD);
+	estimateOptimize(pairPoints, principalPnt, Size(principalPnt.x * 2, principalPnt.y * 2), optiK, optiT, optiD, estimateK, estimateT, estimateD, 0.1);
 
 	cout << "Ä£Äâ»·¾³²âÊÔ£º" << endl;
 	cout << "True value:" << endl;
@@ -201,20 +207,18 @@ void makeImagePoints(vector<PairPoint> & pairPoints, const cv::Mat K, const cv::
 	{
 		cv::Mat W1 = (cv::Mat_<double>(4, 1) << pairPoints[i].worldPoint.x, pairPoints[i].worldPoint.y, pairPoints[i].worldPoint.z, 1.0);
 
-		cv::Mat W2 = T * W1;
-
-		double fx = K.at<double>(0, 0);
-		double cx = K.at<double>(0, 2);
-		double fy = K.at<double>(1, 1);
-		double cy = K.at<double>(1, 2);
-
+		cv::Mat W2 = K * T * W1;
 		double ratio = std::abs(W2.at<double>(2, 0)) < 10e-6 ? 1 : W2.at<double>(2, 0);
 
 		double x = W2.at<double>(0, 0) / ratio;
 		double y = W2.at<double>(1, 0) / ratio;
-
-		double x_distorted = x;
-		double y_distorted = y;
+		
+		double u_p = x;
+		double v_p = y;
+		double u0 = K.at<double>(0, 2);
+		double v0 = K.at<double>(1, 2);
+		double du_p = u_p - u0;
+		double dv_p = v_p - v0;
 		if (isHaveDistortion){
 			double k1 = D.at<double>(0, 0);
 			double k2 = D.at<double>(0, 1);
@@ -222,24 +226,29 @@ void makeImagePoints(vector<PairPoint> & pairPoints, const cv::Mat K, const cv::
 			double p2 = D.at<double>(0, 3);
 			double k3 = D.at<double>(0, 4);
 
-			double r2 = x * x + y * y;
+			double r2 = du_p * du_p + dv_p * dv_p;
 
 			double d_k = (1.0) + k1 * r2 + k2 * pow(r2, 2);// +k3 * pow(r2, 3);
 
-			x_distorted = x * d_k + 2 * p1 * x * y + p2 * (r2 + 2 * x * x);
-			y_distorted = y * d_k + 2 * p2 * x * y + p1 * (r2 + 2 * y * y);
+			u_p = u0 + du_p * d_k + 2 * p1 * du_p * dv_p + p2 * (3 * du_p * du_p + dv_p * dv_p);
+			v_p = v0 + dv_p * d_k + p1 * (du_p * du_p + 3 * dv_p * dv_p) + 2 * p2 * du_p * dv_p;
 		}
-
 		Point2d pts;
-		pts.x = fx * x_distorted + cx;
-		pts.y = fy * y_distorted + cy;
-
+		pts.x = u_p;
+		pts.y = v_p;
 		if (pts.x >= 0 && pts.x < imageSize.width && pts.y >= 0 && pts.y < imageSize.height){
 			pairPoints[i].imagePoint = pts;
 			i++;
 		}
 		else
 			pairPoints.erase(pairPoints.begin() + i);
+
+		//double fx = K.at<double>(0, 0);
+		//double cx = K.at<double>(0, 2);
+		//double fy = K.at<double>(1, 1);
+		//double cy = K.at<double>(1, 2);
+
+		
 	}
 }
 
