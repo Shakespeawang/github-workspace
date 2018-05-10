@@ -64,5 +64,5 @@ result
 ![](./pic/img5_rst.jpg)
 
 # Summary
-From the test result, we can get the almost perfect estimated value and perfect optimized value in the no noise monitor environment. Meanwhile, we got the bad estimated value and optimized value in first image and the not good estimated value and optimized value in second image but the good estimated value and optimized value in third image . Thus, we can merely get good estimated value and optimized value when the target points close to the principal point were enough.
+From the test result, we can get the almost perfect estimated value and perfect optimized value in the no noise monitor environment. Meanwhile, we got the same good estimated value with Zhang's but the bad optimized value in the real environment. Thus, we can merely get good estimated value and optimized value when the target points close to the principal point were enough.
 
