@@ -14,7 +14,7 @@ No Noise Monitor Environment
 ----------------------------
 result
 
-![](./pic/monitor.jpg)
+![](./pic/monitor1.jpg)
 
 
 Real Environment
