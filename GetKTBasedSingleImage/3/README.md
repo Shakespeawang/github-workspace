@@ -12,17 +12,9 @@ Test Result
 ------------
 No Noise Monitor Environment
 ----------------------------
-True value:
+result
 
-![](./pic/monitor_true.PNG)
-
-Estimated value:
-
-![](./pic/monitor_estimate.PNG)
-
-Optimized value:
-
-![](./pic/monitor_optimize.PNG)
+![](./pic/monitor.jpg)
 
 
 Real Environment
@@ -31,52 +23,28 @@ Real Environment
 source image:
 ![](./pic/1.jpg)
 
-True value:
+result
 
-![](./pic/img1_true.PNG)
-
-Estimated value:
-
-![](./pic/img1_estimate.PNG)
-
-Optimized value:
-
-![](./pic/img1_optimize.PNG)
+![](./pic/img1_rst.jpg)
 
 
 ### 2nd image
 source image: 
 ![](./pic/2.jpg)
 
-True value:
+result
 
-![](./pic/img2_true.PNG)
-
-Estimated value:
-
-![](./pic/img2_estimate.PNG)
-
-Optimized value:
-
-![](./pic/img2_optimize.PNG)
+![](./pic/img2_rst.jpg)
 
 
 ### 3rd image
 source image: 
 ![](./pic/3.jpg)
 
-True value:
+result
 
-![](./pic/img3_true.PNG)
-
-Estimated value:
-
-![](./pic/img3_estimate.PNG)
-
-Optimized value:
-
-![](./pic/img3_optimize.PNG)
+![](./pic/img3_rst.jpg)
 
 # Summary
-From the test result, we can get the almost perfect estimated value but not good optimized value in the no noise monitor environment. Meanwhile, we got the bad estimated value and optimized value in 1st image and the not good estimated value and optimized value but the good estimated value and optimized value. Thus, we can merely get good estimated value and optimized value when the target points close to the principal point were enough.
+From the test result, we can get the almost perfect estimated value and perfect optimized value in the no noise monitor environment. Meanwhile, we got the bad estimated value and optimized value in first image and the not good estimated value and optimized value in second image but the good estimated value and optimized value in third image . Thus, we can merely get good estimated value and optimized value when the target points close to the principal point were enough.
 
