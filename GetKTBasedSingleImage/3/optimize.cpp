@@ -112,10 +112,10 @@ struct ReprojectionError {
 
 		T x_distorted, y_distorted;
 
-		x_distorted = x * k_p + T(2.0) * D[2] * x * y + D[3] * (r2 + T(2.0) * x * x);
-		y_distorted = y * k_p + T(2.0) * D[3] * x * y + D[2] * (r2 + T(2.0) * y * y);
+		x_distorted = x * k_p;// +T(2.0) * D[2] * x * y + D[3] * (r2 + T(2.0) * x * x);
+		y_distorted = y * k_p;// +T(2.0) * D[3] * x * y + D[2] * (r2 + T(2.0) * y * y);
 
-		T fx = K[0], fy = K[1], cx = T(_u0), cy = T(_v0);
+		T fx = K[0], fy = K[0], cx = T(_u0), cy = T(_v0);
 
 		T predicited_x = fx * x_distorted + cx;
 		T predicited_y = fy * y_distorted + cy;
@@ -204,7 +204,7 @@ void getPrincipalNearbyPoints(std::vector<PairPoint> & prinNearPnts, const std::
 */
 void estimateFocus(cv::Mat & K, const cv::Mat & H, const cv::Point2d prinPnt)
 {
-	double h[3 + 1][3 + 1] = { 0 };
+	/*double h[3 + 1][3 + 1] = { 0 };
 	for (size_t i = 0; i < H.rows; i++)
 	{
 		for (size_t j = 0; j < H.cols; j++)
@@ -237,7 +237,7 @@ void estimateFocus(cv::Mat & K, const cv::Mat & H, const cv::Point2d prinPnt)
 	double _y = (_c[1][1] * _c[2][3] - _c[1][3] * _c[2][1]) / (_c[1][2] * _c[2][1] - _c[1][1] * _c[2][2]);
 
 	double _t = std::sqrt(_x);
-	double _f = std::sqrt(_y) / _t;
+	double _f = std::sqrt(_y) / _t;*/
 
 	/*K = (cv::Mat_<double>(3, 3) <<
 		_f, 0, prinPnt.x,
@@ -399,7 +399,7 @@ void matchPair(std::vector<PairPoint> & perfectPnts, std::vector<PairPoint> & di
 void estimateDistortion(cv::Mat & D, const std::vector<PairPoint> & perfectPnts, const std::vector<PairPoint> & distortedPnts, const cv::Point2d prinPnt)
 {
 	assert(perfectPnts.size() == distortedPnts.size());
-	cv::Mat_<double> A(2 * distortedPnts.size(), 4);
+	cv::Mat_<double> A(2 * distortedPnts.size(), 2);
 	cv::Mat_<double> b(2 * distortedPnts.size(), 1);
 	for (size_t i = 0; i < distortedPnts.size(); i++)
 	{
@@ -409,13 +409,13 @@ void estimateDistortion(cv::Mat & D, const std::vector<PairPoint> & perfectPnts,
 
 		A.at<double>(i * 2 + 0, 0) = du * r2;
 		A.at<double>(i * 2 + 0, 1) = du * r2 * r2;
-		A.at<double>(i * 2 + 0, 2) = 2 * du * dv;
-		A.at<double>(i * 2 + 0, 3) = 3 * du * du + dv * dv;
+		/*A.at<double>(i * 2 + 0, 2) = 2 * du * dv;
+		A.at<double>(i * 2 + 0, 3) = 3 * du * du + dv * dv;*/
 
 		A.at<double>(i * 2 + 1, 0) = dv * r2;
 		A.at<double>(i * 2 + 1, 1) = dv * r2 * r2;
-		A.at<double>(i * 2 + 1, 2) = du * du + 3 * dv * dv;
-		A.at<double>(i * 2 + 1, 3) = 2 * du * dv;
+		/*A.at<double>(i * 2 + 1, 2) = du * du + 3 * dv * dv;
+		A.at<double>(i * 2 + 1, 3) = 2 * du * dv;*/
 
 		b.at<double>(i * 2 + 0, 0) = distortedPnts[i].worldPoint.x - perfectPnts[i].worldPoint.x;
 		b.at<double>(i * 2 + 1, 0) = distortedPnts[i].worldPoint.y - perfectPnts[i].worldPoint.y;
@@ -515,7 +515,7 @@ bool array_2_matrix(cv::Mat & mat, const double arr[], const int arr_row, const 
 	return true;
 }
 
-void reprojectionOptimize(const std::vector<PairPoint> & pairPoints, cv::Mat & K, cv::Mat & T, cv::Mat & D)
+void reprojectionOptimize(const std::vector<PairPoint> & pairPoints, cv::Mat & K, cv::Mat & T, cv::Mat & D, const double f_section,const double k0_section,const double k1_section)
 {
 	double dK[2], dR[3], dt[3], dD[5];
 	dK[0] = K.at<double>(0, 0);
@@ -530,8 +530,25 @@ void reprojectionOptimize(const std::vector<PairPoint> & pairPoints, cv::Mat & K
 	for (size_t i = 0; i < pairPoints.size(); i++) {
 		ceres::CostFunction * costFunc = ReprojectionError::Create(pairPoints[i].imagePoint, pairPoints[i].worldPoint,u0,v0);
 		reprojectionPro.AddResidualBlock(costFunc, NULL, dK, dR, dt, dD);
-
 	}
+	double const_f0 = dK[0];
+	double const_k0 = dD[0];
+	double const_k1 = dD[1];
+	if (std::abs(f_section) > 10e-6){
+		reprojectionPro.SetParameterUpperBound(dK, 0, const_f0 + f_section);
+		reprojectionPro.SetParameterLowerBound(dK, 0, const_f0 - f_section);
+	}
+
+	if (std::abs(k0_section) > 10e-6){
+		reprojectionPro.SetParameterUpperBound(dD, 0, const_k0 + k0_section);
+		reprojectionPro.SetParameterLowerBound(dD, 0, const_k0 - k0_section);
+	}
+
+	if (std::abs(k1_section) > 10e-6){
+		reprojectionPro.SetParameterUpperBound(dD, 1, const_k1 + k1_section);
+		reprojectionPro.SetParameterLowerBound(dD, 1, const_k1 - k1_section);
+	}
+
 	ceres::Solver::Options reprojection_options;
 	reprojection_options.linear_solver_type = ceres::DENSE_SCHUR;
 	reprojection_options.minimizer_progress_to_stdout = true;
@@ -542,7 +559,7 @@ void reprojectionOptimize(const std::vector<PairPoint> & pairPoints, cv::Mat & K
 
 	//double数组转化为矩阵
 	K.at<double>(0, 0) = dK[0];
-	K.at<double>(1, 1) = dK[1];
+	K.at<double>(1, 1) = dK[0];
 
 	RT2transform(dR, dt, T);
 	array_2_matrix(D, dD, 1, 5);
@@ -582,7 +599,7 @@ void object2Cam(std::vector<PairPoint> & pairPoint, const cv::Mat T, const bool 
 		}
 	}
 }
-void estimateOptimize(std::vector<PairPoint> & pairPoints, const cv::Point2d principalPnt, const cv::Size imageSize, cv::Mat & optiK, cv::Mat & optiT, cv::Mat & optiD, cv::Mat & estimateK, cv::Mat & estimateT, cv::Mat & estimateD, const double rate)
+void estimateOptimize(std::vector<PairPoint> & pairPoints, const cv::Point2d principalPnt, const cv::Size imageSize, cv::Mat & optiK, cv::Mat & optiT, cv::Mat & optiD, cv::Mat & estimateK, cv::Mat & estimateT, cv::Mat & estimateD, const double rate, const double f_section, const double k0_section, const double k1_section)
 {
 	std::vector<PairPoint> prinNearPnts;
 	getPrincipalNearbyPoints(prinNearPnts, pairPoints, principalPnt, rate); // 获取主点附近点
@@ -642,13 +659,13 @@ void estimateOptimize(std::vector<PairPoint> & pairPoints, const cv::Point2d pri
 
 	estimateD = (cv::Mat_<double>(1, 5) <<
 		estimateD.at<double>(0, 0), estimateD.at<double>(1, 0),
-		estimateD.at<double>(2, 0), estimateD.at<double>(3, 0), 0);
+		0, 0, 0);
 
 
 	estimateK.copyTo(optiK);
 	estimateT.copyTo(optiT);
 	estimateD.copyTo(optiD);
-	reprojectionOptimize(pairPoints, optiK, optiT, optiD);
+	reprojectionOptimize(pairPoints, optiK, optiT, optiD, f_section, k0_section, k1_section);
 }
 
 
@@ -658,7 +675,7 @@ void estimateOptimize(std::vector<PairPoint> & pairPoints, const cv::Point2d pri
 *	@function :
 *		a construction of the function estimateOptimize.
 */
-void estimateOptimize(const std::vector<cv::Point2d> & imagePnts, const std::vector<cv::Point3d> & worldPnts, const cv::Point2d principalPnt, const cv::Size imageSize, cv::Mat & optiK, cv::Mat & optiT, cv::Mat & optiD, cv::Mat & estimateK, cv::Mat & estimateT, cv::Mat & estimateD, const double rate)
+void estimateOptimize(const std::vector<cv::Point2d> & imagePnts, const std::vector<cv::Point3d> & worldPnts, const cv::Point2d principalPnt, const cv::Size imageSize, cv::Mat & optiK, cv::Mat & optiT, cv::Mat & optiD, cv::Mat & estimateK, cv::Mat & estimateT, cv::Mat & estimateD, const double rate, const double f_section, const double k0_section, const double k1_section)
 {
 	std::vector<PairPoint> pairPoints;
 	getPairPoints(pairPoints, imagePnts, worldPnts);

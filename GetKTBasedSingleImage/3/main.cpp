@@ -83,16 +83,16 @@ void monitorTest()
 	cout << "D:" << endl << optiD << endl;
 }
 
-int main(int argfc,char * arfgv[])
+int main(int argc,char * argv[])
 {
-	int argc = 14;
+	/*int argc = 14;
 	char * argv[] = {
 	"CO",
 	"-img", "D:\\毕业设计\\工程项目\\CalibrationOptimization\\Release\\apple6s\\", "1", "3",
 	"-b", "9", "7",
 	"-s", "20", "20",
 	"-i", "D:\\毕业设计\\工程项目\\CalibrationOptimization\\Release\\apple6s\\K.yaml", "D:\\毕业设计\\工程项目\\CalibrationOptimization\\Release\\apple6s\\T.yaml"};
-	
+	*/
 	try {
 		if (argc < 2){
 			help(); return 0;
@@ -157,7 +157,7 @@ int main(int argfc,char * arfgv[])
 				Point2d principalPnt(intrinsic[i].at<double>(0, 2), intrinsic[i].at<double>(1, 2));
 
 				Mat optiK, optiT, optiD, estimateK, estimateT, estimateD;
-				estimateOptimize(all_observe[i][j], object, principalPnt, imageSize, optiK, optiT, optiD, estimateK, estimateT, estimateD);
+				estimateOptimize(all_observe[i][j], object, principalPnt, imageSize, optiK, optiT, optiD, estimateK, estimateT, estimateD, 8);
 
 				cout << "真实环境测试：" << endl;
 				cout << "True value:" << endl;
@@ -263,7 +263,7 @@ Size getCornerPoints(
 	cv::Size imageSize;
 	for (int i = 0; i < camera_num; i++)
 	{
-		vector<Mat> vec_image_i = readImage(image_path, 0, camera_num - 1, image_num, ".tif", "-");
+		vector<Mat> vec_image_i = readImage(image_path, 0, camera_num - 1, image_num, ".jpg", "-");
 
 		vector<vector<Point2d>> observe_s_j; observe_s_j.clear();
 
