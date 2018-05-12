@@ -649,11 +649,11 @@ void estimateOptimize(std::vector<PairPoint> & pairPoints, const cv::Point2d pri
 	copyPairPoint(pairPoints, distortedPnts); //copy
 	makeImagePoints(distortedPnts, estimateK.inv(), true); //获取畸变归一化图像点
 
-	std::vector<PairPoint>vd, vp;
+	/*std::vector<PairPoint>vd, vp;
 	copyPairPoint(distortedPnts, vd);
 	copyPairPoint(perfectPnts, vp);
 	makeImagePoints(vp, estimateK, false);
-	makeImagePoints(vd, estimateK, false);
+	makeImagePoints(vd, estimateK, false);*/
 
 	estimateDistortion(estimateD, perfectPnts, distortedPnts, principalPnt); //获取畸变参数
 
