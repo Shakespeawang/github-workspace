@@ -614,9 +614,9 @@ void estimateOptimize(std::vector<PairPoint> & pairPoints, const cv::Point2d pri
 	}
 	cv::Mat estimateH = cv::findHomography(A, B); //获取单应矩阵3 x 3
 
-	std::vector<PairPoint>vtest;
+	/*std::vector<PairPoint>vtest;
 	copyPairPoint(pairPoints, vtest);
-	makeImagePoints(vtest, estimateH, false);
+	makeImagePoints(vtest, estimateH, false);*/
 
 	
 	estimateFocus(estimateK, estimateH, principalPnt); // 获取焦距f和系数t

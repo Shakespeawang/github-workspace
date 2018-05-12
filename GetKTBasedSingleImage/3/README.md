@@ -70,7 +70,7 @@ result
 ![](./pic/img5_rst.jpg)
 
 
-The following pictures were from matlab official websites.
+The following pictures were from [matlab official websites](http://robots.stanford.edu/cs223b04/JeanYvesCalib/htmls/example.html).
 * 6th image
 source image: 
 
@@ -112,5 +112,5 @@ result
 
 
 # Summary
-From the test result, we can get the almost perfect estimated value and perfect optimized value in the no noise monitor environment. Meanwhile, we got the not bad estimated value with Zhang's and the not bad optimized value in the real environment. Thus, **we can merely get good estimated value and optimized value when the target points close to the principal point were enough**.
+From the test result, we can get the almost perfect estimated value and perfect optimized value in the no noise monitor environment. Meanwhile, we got the not bad estimated value with Zhang's and the not bad optimized value in the real environment. Thus, **we can merely get good estimated value and optimized value when the target points close to the principal point were enough, besides, we also need to adjust parameters to get the good homography**.
 
