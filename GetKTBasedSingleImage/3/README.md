@@ -112,5 +112,5 @@ result
 
 
 # Summary
-From the test result, we can get the almost perfect estimated value and perfect optimized value in the no noise monitor environment. Meanwhile, we got the not bad estimated value with Zhang's and the not bad optimized value in the real environment. Thus, **we can merely get good estimated value and optimized value when the target points close to the principal point were enough, besides, we also need to adjust parameters to get the good homography**.
+From the test result, we can get the almost perfect estimated value and perfect optimized value in the no noise monitor environment. Meanwhile, we got the not bad estimated value with Zhang's and the same good optimized value with Zhang's in the real environment. Thus, **we can merely get better estimated value and optimized value when the target points close to the principal point were more enough, besides, we also need to adjust parameters to get the better result**.
 

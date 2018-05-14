@@ -8,6 +8,7 @@
 #include <ceres.h>
 #include "optimize.h"
 
+
 using namespace cv;
 using namespace std;
 
@@ -18,8 +19,8 @@ Mat readAImage(int _i, int _j, int _k, string path, string suffix, string connec
 cv::Size getCornerPoints(	vector < vector < vector < Point2d > > > & all_observe,	const Size board_size, const string image_path, const size_t camera_num, const size_t image_num);
 
 
-void randomMakeObjectPoints(vector<PairPoint> & pairPoints, const Rect rect, const int Z, const size_t nums);
-void makeImagePoints(vector<PairPoint> & pairPoints, const Mat K, const Mat T, const Mat D, const Size imageSize, const bool isHaveDistortion);
+//void randomMakeObjectPoints(vector<PairPoint> & pairPoints, const Rect rect, const int Z, const size_t nums);
+//void makeImagePoints(vector<PairPoint> & pairPoints, const Mat K, const Mat T, const Mat D, const Size imageSize, const bool isHaveDistortion);
 
 
 void help(){
@@ -27,80 +28,82 @@ void help(){
 	std::cout << "\t-image 'image path' 'camera nums' 'image nums'" << endl;
 	std::cout << "\t-board-size 'board width' 'board height'" << endl;
 	std::cout << "\t-square-size 'square width' 'square height'" << endl;
+	std::cout << "\t-rate 'choose points rate'" << endl;
 	std::cout << "\t-input Ki.xml Ti.xml" << endl;
 }
 
 
-void monitorTest()
-{
-	Mat K = (Mat_<double>(3, 3) <<
-		1000, 0, 400,
-		0, 800, 300,
-		0, 0, 1);
-	Mat D = (Mat_<double>(1, 5) << 0.01, 0.02, -0.000003, -0.000004, 0);
-	/*Mat T1 = (Mat_<double>(3, 3) <<
-		1, 0, 0,
-		0, 1, 0,
-		0, 0, 1
-		);*/
-	Mat T1 = (Mat_<double>(3, 3) <<
-		8.12486336e-002, - 7.45385349e-001, 6.61664069e-001, 
-		9.94988263e-001, 9.94789228e-002, - 1.01128444e-002,
-		- 5.82836643e-002, 6.59169674e-001, 7.49732196e-001
-		);
-
-	//double t[3] = { 0, 0, 0 };
-	double t[3] = { 1.42059540e+002, -6.71977615e+001, 1.40762988e+003 };
-	Mat T = (Mat_<double>(3, 4) <<
-		T1.at<double>(0, 0), T1.at<double>(0, 1), T1.at<double>(0, 2), t[0],
-		T1.at<double>(1, 0), T1.at<double>(1, 1), T1.at<double>(1, 2), t[1],
-		T1.at<double>(2, 0), T1.at<double>(2, 1), T1.at<double>(2, 2), t[2]
-		);
-
-	Point2d principalPnt(K.at<double>(0, 2), K.at<double>(1, 2));
-	vector<PairPoint> pairPoints;
-	randomMakeObjectPoints(pairPoints, Rect(0, 0, 1000, 1000), 1.0, 1000);//在2000mm * 2000mm * 200mm立方体内随机生成空间点
-	makeImagePoints(pairPoints, K, T, D, Size(principalPnt.x * 2, principalPnt.y * 2), true);
-
-	Mat optiK, optiT, optiD, estimateK, estimateT, estimateD;
-
-	estimateOptimize(pairPoints, principalPnt, Size(principalPnt.x * 2, principalPnt.y * 2), optiK, optiT, optiD, estimateK, estimateT, estimateD, 8);
-
-	cout << "模拟环境测试：" << endl;
-	cout << "True value:" << endl;
-	cout << "K:" << endl << K << endl;
-	cout << "T:" << endl << T << endl;
-	cout << "D:" << endl << D << endl;
-
-	cout << "Estimate value:" << endl;
-	cout << "K:" << endl << estimateK << endl;
-	cout << "T:" << endl << estimateT << endl;
-	cout << "D:" << endl << estimateD << endl;
-
-	cout << "Optimized Estimate value:" << endl;
-	cout << "K:" << endl << optiK << endl;
-	cout << "T:" << endl << optiT << endl;
-	cout << "D:" << endl << optiD << endl;
-}
+//void monitorTest()
+//{
+//	Mat K = (Mat_<double>(3, 3) <<
+//		1000, 0, 400,
+//		0, 1000, 300,
+//		0, 0, 1);
+//	Mat D = (Mat_<double>(1, 5) << 0.01, 0.02, -0.000003, -0.000004, 0);
+//	/*Mat T1 = (Mat_<double>(3, 3) <<
+//		1, 0, 0,
+//		0, 1, 0,
+//		0, 0, 1
+//		);*/
+//	Mat T1 = (Mat_<double>(3, 3) <<
+//		8.12486336e-002, - 7.45385349e-001, 6.61664069e-001, 
+//		9.94988263e-001, 9.94789228e-002, - 1.01128444e-002,
+//		- 5.82836643e-002, 6.59169674e-001, 7.49732196e-001
+//		);
+//
+//	//double t[3] = { 0, 0, 0 };
+//	double t[3] = { 1.42059540e+002, -6.71977615e+001, 1.40762988e+003 };
+//	Mat T = (Mat_<double>(3, 4) <<
+//		T1.at<double>(0, 0), T1.at<double>(0, 1), T1.at<double>(0, 2), t[0],
+//		T1.at<double>(1, 0), T1.at<double>(1, 1), T1.at<double>(1, 2), t[1],
+//		T1.at<double>(2, 0), T1.at<double>(2, 1), T1.at<double>(2, 2), t[2]
+//		);
+//
+//	Point2d principalPnt(K.at<double>(0, 2), K.at<double>(1, 2));
+//	vector<PairPoint> pairPoints;
+//	randomMakeObjectPoints(pairPoints, Rect(0, 0, 1000, 1000), 1.0, 1000);//在2000mm * 2000mm * 200mm立方体内随机生成空间点
+//	makeImagePoints(pairPoints, K, T, D, Size(principalPnt.x * 2, principalPnt.y * 2), true);
+//
+//	Mat optiK, optiT, optiD, estimateK, estimateT, estimateD;
+//
+//	Mat tmp;
+//	estimateOptimize(tmp, pairPoints, principalPnt, Size(principalPnt.x * 2, principalPnt.y * 2), optiK, optiT, optiD, estimateK, estimateT, estimateD, 8);
+//
+//	cout << "模拟环境测试：" << endl;
+//	cout << "True value:" << endl;
+//	cout << "K:" << endl << K << endl;
+//	cout << "T:" << endl << T << endl;
+//	cout << "D:" << endl << D << endl;
+//
+//	cout << "Estimate value:" << endl;
+//	cout << "K:" << endl << estimateK << endl;
+//	cout << "T:" << endl << estimateT << endl;
+//	cout << "D:" << endl << estimateD << endl;
+//
+//	cout << "Optimized Estimate value:" << endl;
+//	cout << "K:" << endl << optiK << endl;
+//	cout << "T:" << endl << optiT << endl;
+//	cout << "D:" << endl << optiD << endl;
+//}
 
 int main(int argc,char * argv[])
 {
 	/*int argc = 14;
 	char * argv[] = {
 	"CO",
-	"-img", "D:\\毕业设计\\工程项目\\CalibrationOptimization\\Release\\apple6s\\", "1", "3",
-	"-b", "9", "7",
-	"-s", "20", "20",
-	"-i", "D:\\毕业设计\\工程项目\\CalibrationOptimization\\Release\\apple6s\\K.yaml", "D:\\毕业设计\\工程项目\\CalibrationOptimization\\Release\\apple6s\\T.yaml"};
+	"-img", "D:\\毕业设计\\工程项目\\CalibrationOptimization\\Release\\matlab\\", "1", "4",
+	"-b", "12", "13",
+	"-s", "30", "30",
+	"-i", "D:\\毕业设计\\工程项目\\CalibrationOptimization\\Release\\matlab\\calib_example_K.yaml", "D:\\毕业设计\\工程项目\\CalibrationOptimization\\Release\\matlab\\calib_example_T.yaml"};
 	*/
 	try {
 		if (argc < 2){
 			help(); return 0;
 		}
-		monitorTest();
 
 		string image_path, Ki_xml, Ti_xml;
 		int camera_nums, image_nums;
+		double rate = 0.3;
 		Size board_size, square_size;
 		for (int i = 1; i < argc;) {
 			if (!strcmp(argv[i], "-img")) {
@@ -112,6 +115,10 @@ int main(int argc,char * argv[])
 			else if (!strcmp(argv[i], "-b")) {
 				board_size.width = atoi(argv[++i]);
 				board_size.height = atoi(argv[++i]);
+				++i;
+			}
+			else if (!strcmp(argv[i], "-r")) {
+				rate = atof(argv[++i]);
 				++i;
 			}
 			else if (!strcmp(argv[i], "-s")) {
@@ -157,8 +164,20 @@ int main(int argc,char * argv[])
 				Point2d principalPnt(intrinsic[i].at<double>(0, 2), intrinsic[i].at<double>(1, 2));
 
 				Mat optiK, optiT, optiD, estimateK, estimateT, estimateD;
-				estimateOptimize(all_observe[i][j], object, principalPnt, imageSize, optiK, optiT, optiD, estimateK, estimateT, estimateD, 8);
+				/*Mat tmpT = (cv::Mat_<double>(3, 4) <<
+					pose_timestamp[j].at<double>(0, 0), pose_timestamp[j].at<double>(0, 1), pose_timestamp[j].at<double>(0, 2), pose_timestamp[j].at<double>(0, 3),
+					pose_timestamp[j].at<double>(1, 0), pose_timestamp[j].at<double>(1, 1), pose_timestamp[j].at<double>(1, 2), pose_timestamp[j].at<double>(1, 3),
+					pose_timestamp[j].at<double>(2, 0), pose_timestamp[j].at<double>(2, 1), pose_timestamp[j].at<double>(2, 2), pose_timestamp[j].at<double>(2, 3)
+					);
 
+				Mat H = intrinsic[i] * tmpT;
+				H /= H.at<double>(2, 3);
+				cout << "H: " << H << endl << endl;
+				Mat img = readAImage(0, 0, j, "D:\\毕业设计\\工程项目\\CalibrationOptimization\\Release\\matlab\\", ".jpg", "-");
+				vector<Point2f> v;*/
+
+				estimateOptimize(all_observe[i][j], object, principalPnt, imageSize, optiK, optiT, optiD, estimateK, estimateT, estimateD, rate);
+				
 				cout << "真实环境测试：" << endl;
 				cout << "True value:" << endl;
 				cout << "K:" << endl << intrinsic[i] << endl;
@@ -184,75 +203,75 @@ int main(int argc,char * argv[])
 	return	0;
 }
 
-
-void randomMakeObjectPoints(vector<PairPoint> & pairPoints, const Rect rect, const int Z, const size_t nums)
-{
-	for (size_t i = 0; i < nums; i++)
-	{
-		PairPoint pt;
-		pt.worldPoint.x = rand() % (rect.width) + rand()*1.0 / RAND_MAX - rect.width / 2.0;
-		pt.worldPoint.y = rand() % (rect.height) + rand()*1.0 / RAND_MAX - rect.height / 2.0;
-		pt.worldPoint.z = 0;// rand() % Z + rand()*1.0 / RAND_MAX - Z / 2.0;
-		//以立方体中心为原点，随机生成一系列空间点
-		pairPoints.push_back(pt);
-	}
-}
-
-
-
-void makeImagePoints(vector<PairPoint> & pairPoints, const cv::Mat K, const cv::Mat T, const cv::Mat D, const Size imageSize, const bool isHaveDistortion)
-{
-	//投影
-	for (size_t i = 0; i < pairPoints.size();)
-	{
-		cv::Mat W1 = (cv::Mat_<double>(4, 1) << pairPoints[i].worldPoint.x, pairPoints[i].worldPoint.y, pairPoints[i].worldPoint.z, 1.0);
-
-		Mat W2 = T * W1;
-
-		double fx = K.at<double>(0, 0);
-		double cx = K.at<double>(0, 2);
-		double fy = K.at<double>(1, 1);
-		double cy = K.at<double>(1, 2);
-
-		double x = W2.at<double>(0, 0) / W2.at<double>(2, 0);
-		double y = W2.at<double>(1, 0) / W2.at<double>(2, 0);
-
-		double x_distorted = x;
-		double y_distorted = y;
-		if (isHaveDistortion){
-			double k1 = D.at<double>(0, 0);
-			double k2 = D.at<double>(0, 1);
-			double p1 = D.at<double>(0, 2);
-			double p2 = D.at<double>(0, 3);
-			double k3 = D.at<double>(0, 4);
-
-			double r2 = x * x + y * y;
-
-			double d_k = (1.0) + k1 * r2 + k2 * pow(r2, 2);// +k3 * pow(r2, 3);
-
-			x_distorted = x * d_k + 2 * p1 * x * y + p2 * (r2 + 2 * x * x);
-			y_distorted = y * d_k + 2 * p2 * x * y + p1 * (r2 + 2 * y * y);
-		}
-
-		Point2d pts;
-		pts.x = fx * x_distorted + cx;
-		pts.y = fy * y_distorted + cy;
-
-		if (pts.x >= 0 && pts.x < imageSize.width && pts.y >= 0 && pts.y < imageSize.height){
-			pairPoints[i].imagePoint = pts;
-			i++;
-		}
-		else
-			pairPoints.erase(pairPoints.begin() + i);
-
-		//double fx = K.at<double>(0, 0);
-		//double cx = K.at<double>(0, 2);
-		//double fy = K.at<double>(1, 1);
-		//double cy = K.at<double>(1, 2);
-
-		
-	}
-}
+//
+//void randomMakeObjectPoints(vector<PairPoint> & pairPoints, const Rect rect, const int Z, const size_t nums)
+//{
+//	for (size_t i = 0; i < nums; i++)
+//	{
+//		PairPoint pt;
+//		pt.worldPoint.x = rand() % (rect.width) + rand()*1.0 / RAND_MAX - rect.width / 2.0;
+//		pt.worldPoint.y = rand() % (rect.height) + rand()*1.0 / RAND_MAX - rect.height / 2.0;
+//		pt.worldPoint.z = 0;// rand() % Z + rand()*1.0 / RAND_MAX - Z / 2.0;
+//		//以立方体中心为原点，随机生成一系列空间点
+//		pairPoints.push_back(pt);
+//	}
+//}
+//
+//
+//
+//void makeImagePoints(vector<PairPoint> & pairPoints, const cv::Mat K, const cv::Mat T, const cv::Mat D, const Size imageSize, const bool isHaveDistortion)
+//{
+//	//投影
+//	for (size_t i = 0; i < pairPoints.size();)
+//	{
+//		cv::Mat W1 = (cv::Mat_<double>(4, 1) << pairPoints[i].worldPoint.x, pairPoints[i].worldPoint.y, pairPoints[i].worldPoint.z, 1.0);
+//
+//		Mat W2 = T * W1;
+//
+//		double fx = K.at<double>(0, 0);
+//		double cx = K.at<double>(0, 2);
+//		double fy = K.at<double>(1, 1);
+//		double cy = K.at<double>(1, 2);
+//
+//		double x = W2.at<double>(0, 0) / W2.at<double>(2, 0);
+//		double y = W2.at<double>(1, 0) / W2.at<double>(2, 0);
+//
+//		double x_distorted = x;
+//		double y_distorted = y;
+//		if (isHaveDistortion){
+//			double k1 = D.at<double>(0, 0);
+//			double k2 = D.at<double>(0, 1);
+//			double p1 = D.at<double>(0, 2);
+//			double p2 = D.at<double>(0, 3);
+//			double k3 = D.at<double>(0, 4);
+//
+//			double r2 = x * x + y * y;
+//
+//			double d_k = (1.0) + k1 * r2 + k2 * pow(r2, 2);// +k3 * pow(r2, 3);
+//
+//			x_distorted = x * d_k + 2 * p1 * x * y + p2 * (r2 + 2 * x * x);
+//			y_distorted = y * d_k + 2 * p2 * x * y + p1 * (r2 + 2 * y * y);
+//		}
+//
+//		Point2d pts;
+//		pts.x = fx * x_distorted + cx;
+//		pts.y = fy * y_distorted + cy;
+//
+//		if (pts.x >= 0 && pts.x < imageSize.width && pts.y >= 0 && pts.y < imageSize.height){
+//			pairPoints[i].imagePoint = pts;
+//			i++;
+//		}
+//		else
+//			pairPoints.erase(pairPoints.begin() + i);
+//
+//		//double fx = K.at<double>(0, 0);
+//		//double cx = K.at<double>(0, 2);
+//		//double fy = K.at<double>(1, 1);
+//		//double cy = K.at<double>(1, 2);
+//
+//		
+//	}
+//}
 
 
 

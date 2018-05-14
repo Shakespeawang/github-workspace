@@ -1,9 +1,23 @@
 /*
 *	@author: liphone
-*	@date:	2018/05/08	22:27
+*	@date:		2018/05/08	22:27
+*	@update:	2018/05/14	10:17
 *
 */
+#ifndef __OPTIMIZE__CPP
+#define __OPTIMIZE__CPP
+
+
 #include "optimize.h"
+
+
+
+typedef struct PairPoint
+{
+	cv::Point2d imagePoint;
+	cv::Point3d worldPoint;
+
+}PairPoint;
 
 
 
@@ -167,6 +181,21 @@ void getPairPoints(std::vector<PairPoint> & pairPoints, const std::vector<cv::Po
 bool cmp(cv::Point2d a, cv::Point2d b){ return a.x < b.x; }
 void getPrincipalNearbyPoints(std::vector<PairPoint> & prinNearPnts, const std::vector<PairPoint> & pairPoint, const cv::Point2d prinPnt, const double rate)
 {
+	/*srand(time(NULL));
+	for (size_t i = 0; i < pairPoint.size()/2; i++)
+	{
+		int rnd = rand() % pairPoint.size();
+		prinNearPnts.push_back(pairPoint[rnd]);
+	}*/
+	/*for (size_t i = 3; i < 9; i++)
+	{
+		for (size_t j = 3; j < 9; j++)
+		{
+
+			prinNearPnts.push_back(pairPoint[i*12 + j]);
+		}
+	}
+	return;*/
 	std::vector<cv::Point2d> v;
 	for (size_t i = 0; i < pairPoint.size(); i++)
 	{
@@ -599,7 +628,7 @@ void object2Cam(std::vector<PairPoint> & pairPoint, const cv::Mat T, const bool 
 		}
 	}
 }
-void estimateOptimize(std::vector<PairPoint> & pairPoints, const cv::Point2d principalPnt, const cv::Size imageSize, cv::Mat & optiK, cv::Mat & optiT, cv::Mat & optiD, cv::Mat & estimateK, cv::Mat & estimateT, cv::Mat & estimateD, const double rate, const double f_section, const double k0_section, const double k1_section)
+void estimateOptimizeInternal(std::vector<PairPoint> & pairPoints, const cv::Point2d principalPnt, const cv::Size imageSize, cv::Mat & optiK, cv::Mat & optiT, cv::Mat & optiD, cv::Mat & estimateK, cv::Mat & estimateT, cv::Mat & estimateD, const double rate, const double f_section, const double k0_section, const double k1_section)
 {
 	std::vector<PairPoint> prinNearPnts;
 	getPrincipalNearbyPoints(prinNearPnts, pairPoints, principalPnt, rate); // 获取主点附近点
@@ -615,9 +644,8 @@ void estimateOptimize(std::vector<PairPoint> & pairPoints, const cv::Point2d pri
 	cv::Mat estimateH = cv::findHomography(A, B); //获取单应矩阵3 x 3
 
 	/*std::vector<PairPoint>vtest;
-	copyPairPoint(pairPoints, vtest);
+	copyPairPoint(pairPoints, vtest);	
 	makeImagePoints(vtest, estimateH, false);*/
-
 	
 	estimateFocus(estimateK, estimateH, principalPnt); // 获取焦距f和系数t
 
@@ -679,9 +707,12 @@ void estimateOptimize(const std::vector<cv::Point2d> & imagePnts, const std::vec
 {
 	std::vector<PairPoint> pairPoints;
 	getPairPoints(pairPoints, imagePnts, worldPnts);
-	estimateOptimize(pairPoints, principalPnt, imageSize, optiK, optiT, optiD, estimateK, estimateT, estimateD, rate);
+	std::vector<cv::Point2f>v;
+	estimateOptimizeInternal(pairPoints, principalPnt, imageSize, optiK, optiT, optiD, estimateK, estimateT, estimateD, rate, f_section, k0_section, k1_section);
+
 }
 
 
 
 
+#endif // __OPTIMIZE__CPP
