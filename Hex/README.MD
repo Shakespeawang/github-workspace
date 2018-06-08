@@ -1,4 +1,4 @@
 Hex
 ===
-A simple small program.
+A simple small hex program.
 
