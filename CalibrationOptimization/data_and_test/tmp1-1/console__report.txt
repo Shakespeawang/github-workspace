@@ -1,0 +1,45 @@
+
+
+
+Solver Summary (v 1.13.0-eigen-(3.3.4)-no_lapack-openmp)
+
+                                     Original                  Reduced
+Parameter blocks                           66                       66
+Parameters                                231                      231
+Residual blocks                          3726                     3726
+Residual                                 7452                     7452
+
+Minimizer                        TRUST_REGION
+
+Dense linear algebra library            EIGEN
+Trust region strategy     LEVENBERG_MARQUARDT
+
+                                        Given                     Used
+Linear solver                     DENSE_SCHUR              DENSE_SCHUR
+Threads                                     1                        1
+Linear solver threads                       1                        1
+Linear solver ordering              AUTOMATIC                     8,58
+Schur structure                         2,d,d                    2,d,d
+
+Cost:
+Initial                         6.971975e+002
+Final                           1.452169e+002
+Change                          5.519806e+002
+
+Minimizer iterations                        6
+Successful steps                            6
+Unsuccessful steps                          0
+
+Time (in seconds):
+Preprocessor                           0.0073
+
+  Residual evaluation                  0.1423
+  Jacobian evaluation                  0.6016
+  Linear solver                        0.1275
+Minimizer                              0.9109
+
+Postprocessor                          0.0002
+Total                                  0.9184
+
+Termination:                      CONVERGENCE (Function tolerance reached. |cost_change|/cost: 6.146134e-007 <= 1.000000e-006)
+

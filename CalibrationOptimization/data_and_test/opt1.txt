@@ -1,0 +1,20 @@
+calculating...
+Before: reprojection error:697.198, restruction error:2842.99
+iter      cost      cost_change  |gradient|   |step|    tr_ratio  tr_radius  ls_iter  iter_time  total_time
+   0  6.971975e+002    0.00e+000    6.16e+004   0.00e+000   0.00e+000  1.00e+004        0    1.06e-001    1.13e-001
+   1  1.906110e+002    5.07e+002    1.02e+004   2.68e+002   9.78e-001  3.00e+004        1    1.52e-001    2.66e-001
+   2  1.545558e+002    3.61e+001    1.05e+004   9.04e+001   9.79e-001  9.00e+004        1    1.48e-001    4.13e-001
+   3  1.463562e+002    8.20e+000    6.75e+003   4.69e+001   9.69e-001  2.70e+005        1    1.54e-001    5.67e-001
+   4  1.452451e+002    1.11e+000    1.13e+003   1.82e+001   9.96e-001  8.10e+005        1    1.50e-001    7.18e-001
+   5  1.452169e+002    2.82e-002    3.48e+001   3.08e+000   1.00e+000  2.43e+006        1    1.54e-001    8.72e-001
+After: reprojection error:145.217, restruction error:1.00741e+007
+calculating...
+Before: reprojection error:145.217, restruction error:309.549
+iter      cost      cost_change  |gradient|   |step|    tr_ratio  tr_radius  ls_iter  iter_time  total_time
+   0  1.452169e+002    0.00e+000    3.80e+001   0.00e+000   0.00e+000  1.00e+004        0    9.50e-002    1.02e-001
+After: reprojection error:145.217, restruction error:309.55
+calculating...
+Before: reprojection error:145.217, restruction error:309.55
+iter      cost      cost_change  |gradient|   |step|    tr_ratio  tr_radius  ls_iter  iter_time  total_time
+   0  1.452169e+002    0.00e+000    3.80e+001   0.00e+000   0.00e+000  1.00e+004        0    1.30e-001    1.43e-001
+After: reprojection error:145.217, restruction error:309.55
