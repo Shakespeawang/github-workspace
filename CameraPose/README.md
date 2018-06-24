@@ -1,6 +1,6 @@
 Camera Pose
 ======================
-A project for finding and optimizing rotation matrix and translation matrix.
+A project for finding and optimizing rotation matrix and translation matrix of camera pose.
 
 Goal
 -----
@@ -17,11 +17,19 @@ Procedure
 
 Data
 ----
-![](./pic/1.png) ![](./pic/2.png)
+![](./pic/img0_000000_10.png) ![](./pic/img1_000000_10.png)
+
+Calibration
+-----------
+![](./pic/calib.png)
 
 Result
 -------
 ![](./pic/rst.png)
+
+Question
+--------
+这里选取了kitti数据集中两个灰度相机拍摄的第10帧图像，其相机的标定结果见Calibration，前三列应该为相机内参数，第四列应该为相机之间的位置差距，从第四列可以看出，两个灰度相机和两个彩色相机之间的位置差距只有x方向有位移，其他方向几乎忽略不计，但是从结果图中可以看出，svd分解得到的R,t，R接近于单位矩阵E，而t乘以任意比例因子都无法做到和标定结果相近似，这是问题所在。
 
 Confused(Clear)
 ---------------
