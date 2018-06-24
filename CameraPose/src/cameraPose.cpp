@@ -1,4 +1,4 @@
-#include "binocularCalibration.h"
+#include "cameraPose.h"
 
 
 
@@ -158,10 +158,17 @@ struct EpipolarError {
 		T rot_matrix[9];
 		CalcRodrigues(R_, rot_matrix);
 
+		T t_tmp[3];
+
+		T length = ceres::sqrt(t_[0] * t_[0] + t_[1] * t_[1] + t_[2] * t_[2]);
+		t_tmp[0] = t_[0] / length;
+		t_tmp[1] = t_[1] / length;
+		t_tmp[2] = t_[2] / length;
+
 		T t_x[9];
-		t_x[0] = T(0.);			t_x[1] = -t_[2];		t_x[2] = t_[1];
-		t_x[3] = t_[2];			t_x[4] = T(0.);			t_x[5] = -t_[0];
-		t_x[6] = -t_[1];		t_x[7] = t_[0];			t_x[8] = T(0.);
+		t_x[0] = T(0.);				t_x[1] = -t_tmp[2];			t_x[2] = t_tmp[1];
+		t_x[3] = t_tmp[2];			t_x[4] = T(0.);				t_x[5] = -t_tmp[0];
+		t_x[6] = -t_tmp[1];			t_x[7] = t_tmp[0];			t_x[8] = T(0.);
 
 		T E[9];
 		matrix_multiply(t_x, rot_matrix, E, 3, 3, 3, 3);
@@ -334,12 +341,18 @@ void pose_estimation_2d2d(const std::vector<cv::Point2f>& points1, const std::ve
 
 	cv::Mat R1, R2;
 	cv::decomposeEssentialMat(essential_matrix, R1, R2, t);
-	R = R1;
+	std::cout << "R1: " << R1 << std::endl;
+	std::cout << "R2: " << R2 << std::endl;
+	std::cout << "t: " << t << std::endl;
+	R = R2;
+	t = -t;
 	//-- 从本质矩阵中恢复旋转和平移信息.
-	/*cv::Mat _R, _t;
-	double focal_length = 521.0;
-	cv::Point2d principal_point(325.1, 249.7);
-	cv::recoverPose(essential_matrix, points1, points2, _R, _t, focal_length, principal_point);*/
+	cv::Mat _R, _t;
+	double focal_length = K1.at<double>(0,0);
+	cv::Point2d principal_point(K1.at<double>(0, 2), K1.at<double>(1, 2));
+	cv::recoverPose(essential_matrix, points1, points2, _R, _t, focal_length, principal_point);
+	std::cout << "_R: " << _R << std::endl;
+	std::cout << "_t: " << _t << std::endl;
 }
 
 

@@ -1,6 +1,6 @@
 
-#ifndef __BINOCULAR_CALIBRATION__H
-#define __BINOCULAR_CALIBRATION__H
+#ifndef __CAMERA_POSE__H
+#define __CAMERA_POSE__H
 
 #include <iostream>
 #include <opencv2/core/core.hpp>
@@ -13,5 +13,5 @@
 
 void pose_estimate(const cv::Mat& img_1, const cv::Mat& img_2, const cv::Mat& K1, const cv::Mat& K2, cv::Mat& init_R, cv::Mat& init_t, cv::Mat& opt_R, cv::Mat& opt_t);
 
-#endif // !__BINOCULAR_CALIBRATION__H
+#endif // !__CAMERA_POSE__H
 
