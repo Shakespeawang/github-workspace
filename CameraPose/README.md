@@ -5,6 +5,7 @@ A project for finding and optimizing rotation matrix and translation matrix of c
 Task
 ----
 双目立体视觉求深度信息在图像矫正之后，此时就相当于两个光轴平行并且在同一条直线上的相机观察物体。深度信息对于每一个相机都是一样的，如图所示：
+
 ![](./pic/binocularCamera.jpg)
 
 根据Data数据利用SGBM求得的视差可视化图如下：
