@@ -161,6 +161,7 @@ struct EpipolarError {
 		T t_tmp[3];
 
 		T length = ceres::sqrt(t_[0] * t_[0] + t_[1] * t_[1] + t_[2] * t_[2]);
+		length = T(1.);
 		t_tmp[0] = t_[0] / length;
 		t_tmp[1] = t_[1] / length;
 		t_tmp[2] = t_[2] / length;
@@ -204,11 +205,15 @@ struct EpipolarError {
 		matrix_multiply(F_t, x2, L2, 3, 3, 3, 1);
 
 		T tmp_3[1], tmp_4[1];
-		matrix_multiply(x1, L1, tmp_3, 1, 3, 3, 1);
-		matrix_multiply(x2, L2, tmp_4, 1, 3, 3, 1);
+		matrix_multiply(x2, L1, tmp_3, 1, 3, 3, 1);
+		matrix_multiply(x1, L2, tmp_4, 1, 3, 3, 1);
+
+		T len1, len2;
+		len1 = ceres::sqrt(L1[0] * L1[0] + L1[1] * L1[1]);
+		len2 = ceres::sqrt(L2[0] * L2[0] + L2[1] * L2[1]);
 
 		T rst[1];
-		rst[0] = ceres::abs(tmp_3[0]) + ceres::abs(tmp_4[0]);
+		rst[0] = ceres::abs(tmp_3[0] / len1) + ceres::abs(tmp_4[0] / len2);
 
 		residual[0] = T(rst[0]);
 
@@ -262,8 +267,201 @@ void epipolarOptimize(const std::vector<cv::Point2f>& points1, const std::vector
 
 
 
+/*
+*	@重投影误差优化算法
+*	@步骤：
+*		1. 计算两个相机视图的三维空间点坐标
+*		2. 计算0号相机下的重投影误差，计算1号相机坐标系下的重投影误差（用到相机之间的位姿）
+*		3. 放入Ceres中优化
+*/
+//
+//struct ReprojectionError {
+//	ReprojectionError(cv::Mat _K1, cv::Mat _K2, cv::Point2d _p1, cv::Point2d _p2)
+//		: K1_M(_K1), K2_M(_K2), p1(_p1), p2(_p2) {}
+//
+//	template <typename T>
+//	bool operator()(const T * const R_, const T * const t_, T * residual) const
+//	{
+//		T rot_matrix[9];
+//		CalcRodrigues(R_, rot_matrix);
+//
+//		T t_tmp[3];
+//
+//		T length = ceres::sqrt(t_[0] * t_[0] + t_[1] * t_[1] + t_[2] * t_[2]);
+//		t_tmp[0] = t_[0] / length;
+//		t_tmp[1] = t_[1] / length;
+//		t_tmp[2] = t_[2] / length;
+//
+//		T t_x[9];
+//		t_x[0] = T(0.);				t_x[1] = -t_tmp[2];			t_x[2] = t_tmp[1];
+//		t_x[3] = t_tmp[2];			t_x[4] = T(0.);				t_x[5] = -t_tmp[0];
+//		t_x[6] = -t_tmp[1];			t_x[7] = t_tmp[0];			t_x[8] = T(0.);
+//
+//		T E[9];
+//		matrix_multiply(t_x, rot_matrix, E, 3, 3, 3, 3);
+//
+//		T K2[9], K1[9];
+//		K2[0] = T(K2_M.at<double>(0, 0));			K2[1] = T(K2_M.at<double>(0, 1));			K2[2] = T(K2_M.at<double>(0, 2));
+//		K2[3] = T(K2_M.at<double>(1, 0));			K2[4] = T(K2_M.at<double>(1, 1));			K2[5] = T(K2_M.at<double>(1, 2));
+//		K2[6] = T(K2_M.at<double>(2, 0));			K2[7] = T(K2_M.at<double>(2, 1));			K2[8] = T(K2_M.at<double>(2, 2));
+//
+//		K1[0] = T(K1_M.at<double>(0, 0));			K1[1] = T(K1_M.at<double>(0, 1));			K1[2] = T(K1_M.at<double>(0, 2));
+//		K1[3] = T(K1_M.at<double>(1, 0));			K1[4] = T(K1_M.at<double>(1, 1));			K1[5] = T(K1_M.at<double>(1, 2));
+//		K1[6] = T(K1_M.at<double>(2, 0));			K1[7] = T(K1_M.at<double>(2, 1));			K1[8] = T(K1_M.at<double>(2, 2));
+//
+//		T K2_inv[9], K1_inv[9];
+//		matrix_inv(K2, K2_inv, 3, 3);
+//		matrix_inv(K1, K1_inv, 3, 3);
+//
+//		T K2_T[9];
+//		matrix_t(K2_inv, K2_T, 3, 3, 3, 3);
+//
+//		T tmp_1[9], tmp_2[9], F[9];
+//		matrix_multiply(K2_T, E, tmp_2, 3, 3, 3, 3);
+//		matrix_multiply(tmp_2, K1_inv, F, 3, 3, 3, 3);
+//
+//		T x2[3], x1[3];
+//		x2[0] = T(p2.x);	x2[1] = T(p2.y);	x2[2] = T(1.);
+//		x1[0] = T(p1.x);	x1[1] = T(p1.y);	x1[2] = T(1.);
+//
+//		T L1[3], L2[3];
+//		matrix_multiply(F, x1, L1, 3, 3, 3, 1);
+//		T F_t[9];
+//		matrix_t(F, F_t, 3, 3, 3, 3);
+//		matrix_multiply(F_t, x2, L2, 3, 3, 3, 1);
+//
+//		T tmp_3[1], tmp_4[1];
+//		matrix_multiply(x2, L1, tmp_3, 1, 3, 3, 1);
+//		matrix_multiply(x1, L2, tmp_4, 1, 3, 3, 1);
+//
+//		T rst[1];
+//		rst[0] = ceres::abs(tmp_3[0]) + ceres::abs(tmp_4[0]);
+//
+//		residual[0] = T(rst[0]);
+//
+//		return true;
+//	}
+//
+//	static ceres::CostFunction * Create(cv::Mat _K1, cv::Mat _K2, cv::Point2d _p1, cv::Point2d _p2) {
+//
+//		return (new ceres::AutoDiffCostFunction<EpipolarError, 1, 3, 3>
+//			(new ReprojectionError(_K1, _K2, _p1, _p2)));
+//
+//	}
+//	cv::Mat K1_M;
+//	cv::Mat K2_M;
+//	cv::Point2d p1;
+//	cv::Point2d p2;
+//};
+//
+//void reprojectionOptimize(const std::vector<cv::Point2f>& points1, const std::vector<cv::Point2f>& points2, const cv::Mat& K1, const cv::Mat& K2, const cv::Mat& init_R, const cv::Mat& init_t, cv::Mat& opt_R, cv::Mat& opt_t)
+//{
+//	assert(points1.size() == points2.size());
+//	cv::Mat rot_vec;
+//	cv::Rodrigues(init_R, rot_vec);
+//	double buf_R[3], buf_t[3];
+//	buf_t[0] = init_t.at<double>(0, 0);		buf_t[1] = init_t.at<double>(1, 0);		buf_t[2] = init_t.at<double>(2, 0);
+//	buf_R[0] = rot_vec.at<double>(0, 0);	buf_R[1] = rot_vec.at<double>(1, 0);	buf_R[2] = rot_vec.at<double>(2, 0);
+//
+//	//-- 验证对极约束
+//	ceres::Problem epipolarPro;
+//	for (size_t i = 0; i < points1.size(); i++)
+//	{
+//		/*cv::Point2d pt1 = pixel2cam(points1[i], K1);
+//		cv::Mat y1 = (cv::Mat_<double>(3, 1) << pt1.x, pt1.y, 1.);
+//		cv::Point2d pt2 = pixel2cam(points2[i], K2);
+//		cv::Mat y2 = (cv::Mat_<double>(3, 1) << pt2.x, pt2.y, 1.);*/
+//
+//		ceres::CostFunction * costFunc = EpipolarError::Create(K1, K2, points1[i], points2[i]);
+//		epipolarPro.AddResidualBlock(costFunc, NULL, buf_R, buf_t);
+//	}
+//	ceres::Solver::Options epipolar_options;
+//	epipolar_options.linear_solver_type = ceres::DENSE_SCHUR;
+//	epipolar_options.minimizer_progress_to_stdout = true;
+//	epipolar_options.gradient_tolerance = 0;
+//	ceres::Solver::Summary reprojection_summary;
+//	ceres::Solve(epipolar_options, &epipolarPro, &reprojection_summary);
+//
+//	opt_t.at<double>(0, 0) = buf_t[0];		opt_t.at<double>(1, 0) = buf_t[1];		opt_t.at<double>(2, 0) = buf_t[2];
+//	rot_vec.at<double>(0, 0) = buf_R[0];	rot_vec.at<double>(1, 0) = buf_R[1];	rot_vec.at<double>(2, 0) = buf_R[2];
+//	cv::Rodrigues(rot_vec, opt_R);
+//}
+
+
+
 void find_feature_matches(const cv::Mat& img_1, const cv::Mat& img_2, std::vector<cv::Point2f>& points1, std::vector<cv::Point2f>& points2)
 {
+	//if (!img_1.data || !img_2.data)
+	//{
+	//	std::cout << " --(!) Error reading images " << std::endl; return -1;
+	//}
+
+	////-- Step 1: Detect the keypoints using SURF Detector
+	//int minHessian = 400;
+
+	//SurfFeatureDetector detector(minHessian);
+
+	//std::vector<KeyPoint> keypoints_1, keypoints_2;
+
+	//detector.detect(img_1, keypoints_1);
+	//detector.detect(img_2, keypoints_2);
+
+	////-- Step 2: Calculate descriptors (feature vectors)
+	//SurfDescriptorExtractor extractor;
+
+	//Mat descriptors_1, descriptors_2;
+
+	//extractor.compute(img_1, keypoints_1, descriptors_1);
+	//extractor.compute(img_2, keypoints_2, descriptors_2);
+
+	////-- Step 3: Matching descriptor vectors using FLANN matcher
+	//FlannBasedMatcher matcher;
+	//std::vector< DMatch > matches;
+	//matcher.match(descriptors_1, descriptors_2, matches);
+
+	//double max_dist = 0; double min_dist = 100;
+
+	////-- Quick calculation of max and min distances between keypoints
+	//for (int i = 0; i < descriptors_1.rows; i++)
+	//{
+	//	double dist = matches[i].distance;
+	//	if (dist < min_dist) min_dist = dist;
+	//	if (dist > max_dist) max_dist = dist;
+	//}
+
+	//printf("-- Max dist : %f \n", max_dist);
+	//printf("-- Min dist : %f \n", min_dist);
+
+	////-- Draw only "good" matches (i.e. whose distance is less than 2*min_dist )
+	////-- PS.- radiusMatch can also be used here.
+	//std::vector< DMatch > good_matches;
+
+	//for (int i = 0; i < descriptors_1.rows; i++)
+	//{
+	//	if (matches[i].distance < 2 * min_dist)
+	//	{
+	//		good_matches.push_back(matches[i]);
+	//	}
+	//}
+
+	////-- Draw only "good" matches
+	//Mat img_matches;
+	//drawMatches(img_1, keypoints_1, img_2, keypoints_2,
+	//	good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
+	//	vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+
+	////-- Show detected matches
+	//imshow("Good Matches", img_matches);
+
+	//for (int i = 0; i < good_matches.size(); i++)
+	//{
+	//	printf("-- Good Match [%d] Keypoint 1: %d  -- Keypoint 2: %d  \n", i, good_matches[i].queryIdx, good_matches[i].trainIdx);
+	//}
+
+	//waitKey(0);
+
+	//return 0;
+
 	std::vector<cv::KeyPoint> keypoints_1, keypoints_2;
 	std::vector<cv::DMatch> matches;
 
@@ -290,7 +488,7 @@ void find_feature_matches(const cv::Mat& img_1, const cv::Mat& img_2, std::vecto
 	matcher->match(descriptors_1, descriptors_2, match);
 
 	//-- 第四步:匹配点对筛选
-	double min_dist = 10000, max_dist = 0;
+	double min_dist = 100, max_dist = 0;
 
 	//找出所有匹配之间的最小距离和最大距离, 即是最相似的和最不相似的两组点之间的距离
 	for (int i = 0; i < descriptors_1.rows; i++)
@@ -308,6 +506,9 @@ void find_feature_matches(const cv::Mat& img_1, const cv::Mat& img_2, std::vecto
 			matches.push_back(match[i]);
 		}
 	}
+
+	cv::Mat imageMatches;
+	drawMatches(img_1, keypoints_1, img_2, keypoints_2, matches,imageMatches, cv::Scalar(255, 0, 0));
 
 	//-- 把匹配点转换为vector<cv::Point2f>的形式
 
@@ -334,7 +535,8 @@ void pose_estimation_2d2d(const std::vector<cv::Point2f>& points1, const std::ve
 	//-- 计算基础矩阵
 	cv::Mat fundamental_matrix;
 	cv::Mat essential_matrix;
-	fundamental_matrix = cv::findFundamentalMat(points1, points2, CV_FM_8POINT);
+	fundamental_matrix = cv::findFundamentalMat(points1, points2, CV_RANSAC);
+	//cv::findEssentialMat();
 
 	//-- 计算本质矩阵
 	essential_matrix = K2.t() * fundamental_matrix * K1;
@@ -353,6 +555,11 @@ void pose_estimation_2d2d(const std::vector<cv::Point2f>& points1, const std::ve
 	cv::recoverPose(essential_matrix, points1, points2, _R, _t, focal_length, principal_point);
 	std::cout << "_R: " << _R << std::endl;
 	std::cout << "_t: " << _t << std::endl;
+	R = _R;
+	t = _t;
+
+	//cv::triangulatePoints();
+	//cv::stereoRectify();
 }
 
 
