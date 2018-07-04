@@ -1,50 +1,56 @@
-Camera Pose
-======================
-A project for finding and optimizing rotation matrix and translation matrix of camera pose.
 
-Task
-----
-这里我们使用了Opencv提供的立体匹配数据，如Data所示，已经是矫正过后的，从运行结果可以看出，Opencv提供的图像对的姿态初值估计的较好。
-
-根据Data数据利用SGBM求得的视差可视化图如下：
-![](./pic/disparity.png)
-
-Goal
------
-Given two images and camera intrinsic parameters, get the camera pose.
-
-Procedure
----------
-* get the matched feature points;
-* find fundamental matrix;
-* find essential matrix;
-* recover camera pose by using svd decompose essential matrix;
-* find the right rotation matrix and translation matrix by triangulation;
-* optimize rotation matrix and translation matrix by using ceres.
-
-Data
-----
-![](./pic/aloeL.jpg) 
-
-![](./pic/aloeR.jpg)
-
-Calibration
------------
-![](./pic/calib.png)
-
-Result
--------
-![](./pic/rst.png)
-
-Question
+原始图像
 --------
-这里选取了kitti数据集中两个灰度相机拍摄的第10帧图像，其相机的标定结果见Calibration，前三列应该为相机内参数，第四列应该为相机之间的位置差距，从第四列可以看出，两个灰度相机和两个彩色相机之间的位置差距只有x方向有位移，其他方向几乎忽略不计，但是从结果图中可以看出，svd分解得到的R,t，R接近于单位矩阵E，而t乘以任意比例因子都无法做到和标定结果相近似，这是问题所在。另外，将kitti所有color和灰度图像都测试了，也是和前面一样的结果。
+左
+![](./pic/kitti_left.png)
 
-Confused(Clear)
----------------
-* Question: What is our goal? Self calibration or optimize K,R,t? Or both?
-* Answer: Given two images and camera intrinsic parameters, find optimized the camera pose.
-* Question: May need svd decompose in order to get epipolar points by **Fe=0**, but hard to do in template function for epipolar optimizing.
-* Answer: Needn't.
-* Optimal solution can be done through soluting an equation fo higher degree, or may be caught in local minumum by iteration search for getting the spatial points.
-* Answer: We don't use optimal solution but reprojection solution.
+右
+![](./pic/kitti_right.png)
+
+真值
+----
+我找不到，大部分只给了相机标定参数和左右图像，姿态需要自己求。
+
+人为给定R,t
+-----------
+相机姿态R，T
+![](./pic/given_rt.png)
+
+矫正图左
+![](./pic/given_rect_L.jpg)
+
+矫正图右边
+![](./pic/given_rect_R.jpg)
+
+视差图
+![](./pic/given_disp.jpg)
+
+本质矩阵分解
+------------
+相机姿态R，T
+![](./pic/e_rt.png)
+
+矫正图左
+![](./pic/e_rect_L.jpg)
+
+矫正图右边
+![](./pic/e_rect_R.jpg)
+
+视差图
+![](./pic/e_disp.jpg)
+
+优化1
+-----
+相机姿态R，T
+![](./pic/way1_rt.png)
+
+矫正图左
+![](./pic/way1_rect_L.jpg)
+
+矫正图右边
+![](./pic/way1_rect_R.jpg)
+
+视差图
+![](./pic/way1_disp.jpg)
+
+相关的代码全是引用别人已经出版了的，除了优化部分，优化部分的目标函数是一点到另一点的极线的垂直距离，我能做的只有这么多了。
