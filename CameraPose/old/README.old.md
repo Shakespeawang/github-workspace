@@ -2,9 +2,16 @@ Camera Pose
 ======================
 A project for finding and optimizing rotation matrix and translation matrix of camera pose.
 
+Task
+----
+这里我们使用了Opencv提供的立体匹配数据，如Data所示，已经是矫正过后的，从运行结果可以看出，Opencv提供的图像对的姿态初值估计的较好。
+
+根据Data数据利用SGBM求得的视差可视化图如下：
+![](./pic/disparity.png)
+
 Goal
 -----
-Given two images and camera intrinsic parameters, get the optimized camera pose.
+Given two images and camera intrinsic parameters, get the camera pose.
 
 Procedure
 ---------
@@ -17,11 +24,9 @@ Procedure
 
 Data
 ----
-左图
-![](./pic/kitti_left.png) 
+![](./pic/aloeL.jpg) 
 
-右图
-![](./pic/kitti_right.png)
+![](./pic/aloeR.jpg)
 
 Calibration
 -----------
@@ -29,30 +34,7 @@ Calibration
 
 Result
 -------
-运行结果
-![](./pic/run_rst.png)
-
-初始值左图矫正
-![](./pic/init_left.jpg)
-
-优化值左图矫正
-![](./pic/opt_left.jpg)
-
-初始值右图矫正
-![](./pic/init_right.jpg)
-
-优化值右图矫正
-![](./pic/opt_right.jpg)
-
-初始视差图
-![](./pic/init_disp.jpg)
-
-优化视差图
-![](./pic/opt_disp.jpg)
-
-Conclusion
-----------
-从运行结果可以看出，平移向量在优化前后保持不变，旋转矩阵优化后直接为单位矩阵，说明还是符合实际情况。在整个过程中，错误的匹配严重影响了实验结果，所以需要提高匹配的准确度。
+![](./pic/rst.png)
 
 Question
 --------
