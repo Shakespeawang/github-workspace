@@ -43,10 +43,12 @@ RANSAC掩码特征点
 ![](./pic/test0_opt_disp.jpg)
 
 初始姿态
+
 ![](./pic/test0_init_RT.png)
 
 优化姿态
-![](./pic/test0_opt_RT.jpg)
+
+![](./pic/test0_opt_RT.png)
 
 #1
 ---
@@ -75,9 +77,11 @@ RANSAC掩码特征点
 ![](./pic/test1_opt_disp.jpg)
 
 初始姿态
+
 ![](./pic/test1_init_RT.png)
 
 优化姿态
+
 ![](./pic/test1_opt_RT.png)
 
 END.
