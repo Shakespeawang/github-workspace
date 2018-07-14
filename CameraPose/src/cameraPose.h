@@ -11,7 +11,7 @@
 //#include "extra.h" // use this if in OpenCV2 
 #include <ceres/ceres.h>
 
-void pose_estimate(const cv::Mat& img_1, const cv::Mat& img_2, const cv::Mat& K1, const cv::Mat& K2, cv::Mat& init_R, cv::Mat& init_t, cv::Mat& opt_R, cv::Mat& opt_t);
+void pose_estimate(const cv::Mat& img_1, const cv::Mat& img_2, const cv::Mat& K1, const cv::Mat& K2, cv::Mat& init_R, cv::Mat& init_t, cv::Mat& opt_R, cv::Mat& opt_t, std::string str_);
 
 #endif // !__CAMERA_POSE__H
 

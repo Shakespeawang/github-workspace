@@ -161,7 +161,7 @@ struct EpipolarError {
 		T t_tmp[3];
 
 		T length = ceres::sqrt(t_[0] * t_[0] + t_[1] * t_[1] + t_[2] * t_[2]);
-		//length = T(1.);
+		length = T(1.);
 		t_tmp[0] = t_[0] / length;
 		t_tmp[1] = t_[1] / length;
 		t_tmp[2] = t_[2] / length;
@@ -212,10 +212,12 @@ struct EpipolarError {
 		len1 = ceres::sqrt(L1[0] * L1[0] + L1[1] * L1[1]);
 		len2 = ceres::sqrt(L2[0] * L2[0] + L2[1] * L2[1]);
 
-		T rst[1];
-		rst[0] = ceres::abs(tmp_3[0] / len1) + ceres::abs(tmp_4[0] / len2);
-
-		residual[0] = T(rst[0]);
+		T rst;
+		rst = ceres::abs(tmp_3[0] / len1) + ceres::abs(tmp_4[0] / len2);
+		//double val = (double)rst[0];
+		//std::cout << rst << "    \\\\\\" << std::endl;
+		
+		residual[0] = T(rst);
 
 		return true;
 	}
@@ -232,9 +234,9 @@ struct EpipolarError {
 	cv::Point2d p2;
 };
 
-void epipolarOptimize(const std::vector<cv::Point2f>& points1, const std::vector<cv::Point2f>& points2, const cv::Mat& K1, const cv::Mat& K2,const cv::Mat& init_R, const cv::Mat& init_t, cv::Mat& opt_R, cv::Mat& opt_t)
+void epipolarOptimize(const std::vector<uchar> m_RANSACStatus, const std::vector<cv::Point2f>& points1, const std::vector<cv::Point2f>& points2, const cv::Mat& K1, const cv::Mat& K2,const cv::Mat& init_R, const cv::Mat& init_t, cv::Mat& opt_R, cv::Mat& opt_t)
 {
-	assert(points1.size() == points2.size());
+	assert(points1.size() == points2.size() && points1.size() == m_RANSACStatus.size());
 	cv::Mat rot_vec;
 	cv::Rodrigues(init_R, rot_vec);
 	double buf_R[3], buf_t[3];
@@ -249,9 +251,10 @@ void epipolarOptimize(const std::vector<cv::Point2f>& points1, const std::vector
 		cv::Mat y1 = (cv::Mat_<double>(3, 1) << pt1.x, pt1.y, 1.);
 		cv::Point2d pt2 = pixel2cam(points2[i], K2);
 		cv::Mat y2 = (cv::Mat_<double>(3, 1) << pt2.x, pt2.y, 1.);*/
-
-		ceres::CostFunction * costFunc = EpipolarError::Create(K1, K2, points1[i], points2[i]);
-		epipolarPro.AddResidualBlock(costFunc, NULL, buf_R, buf_t);
+		if (m_RANSACStatus[i]) {
+			ceres::CostFunction * costFunc = EpipolarError::Create(K1, K2, points1[i], points2[i]);
+			epipolarPro.AddResidualBlock(costFunc, NULL, buf_R, buf_t);
+		}
 	}
 	ceres::Solver::Options epipolar_options;
 	epipolar_options.linear_solver_type = ceres::DENSE_SCHUR;
@@ -267,7 +270,7 @@ void epipolarOptimize(const std::vector<cv::Point2f>& points1, const std::vector
 
 
 
-void find_feature_matches(const cv::Mat& img_1, const cv::Mat& img_2, std::vector<cv::Point2f>& points1, std::vector<cv::Point2f>& points2)
+void find_feature_matches(const cv::Mat& img_1, const cv::Mat& img_2, std::vector<cv::Point2f>& points1, std::vector<cv::Point2f>& points2, std::string str_)
 {
 	//if (!img_1.data || !img_2.data)
 	//{
@@ -386,7 +389,14 @@ void find_feature_matches(const cv::Mat& img_1, const cv::Mat& img_2, std::vecto
 	}
 
 	cv::Mat imageMatches;
-	drawMatches(img_1, keypoints_1, img_2, keypoints_2, matches,imageMatches, cv::Scalar(255, 0, 0));
+	drawMatches(img_1, keypoints_1, img_2, keypoints_2, matches, imageMatches, cv::Scalar(255, 0, 0));
+
+	cv::imwrite(str_ + ".imageMatches.jpg", imageMatches);
+
+	cv::namedWindow("imageMatches", 0);
+	cv::resizeWindow("imageMatches", imageMatches.cols / 2., imageMatches.rows / 2.);
+	cv::imshow("imageMatches",imageMatches);
+	cv::waitKey(30000);
 
 	//-- 把匹配点转换为vector<cv::Point2f>的形式
 
@@ -411,19 +421,7 @@ void recover2CameraPose(const cv::Mat& R1, const cv::Mat& R2, cv::Mat& R, cv::Ma
 	cv::Mat p2;
 	cv::Mat T;
 	cv::Mat pnt = (cv::Mat_<double>(4, 1) << 1., 1., 1., 1.);
-
-	T = (cv::Mat_<double>(3, 4) <<
-		R1.at<double>(0, 0), R1.at<double>(0, 1), R1.at<double>(0, 2), t.at<double>(0, 0),
-		R1.at<double>(1, 0), R1.at<double>(1, 1), R1.at<double>(1, 2), t.at<double>(1, 0),
-		R1.at<double>(2, 0), R1.at<double>(2, 1), R1.at<double>(2, 2), t.at<double>(2, 0)
-		);
-	p2 = T * pnt;
-	if (p2.at<double>(2, 0) > 0.) {
-		R = R1;
-		t = t;
-		return;
-	}
-
+	
 	T = (cv::Mat_<double>(3, 4) <<
 		R1.at<double>(0, 0), R1.at<double>(0, 1), R1.at<double>(0, 2), -t.at<double>(0, 0),
 		R1.at<double>(1, 0), R1.at<double>(1, 1), R1.at<double>(1, 2), -t.at<double>(1, 0),
@@ -432,6 +430,18 @@ void recover2CameraPose(const cv::Mat& R1, const cv::Mat& R2, cv::Mat& R, cv::Ma
 	p2 = T * pnt;
 	if (p2.at<double>(2, 0) > 0.) {
 		R = R1;
+		t = -t;
+		return;
+	}
+
+	T = (cv::Mat_<double>(3, 4) <<
+		R2.at<double>(0, 0), R2.at<double>(0, 1), R2.at<double>(0, 2), -t.at<double>(0, 0),
+		R2.at<double>(1, 0), R2.at<double>(1, 1), R2.at<double>(1, 2), -t.at<double>(1, 0),
+		R2.at<double>(2, 0), R2.at<double>(2, 1), R2.at<double>(2, 2), -t.at<double>(2, 0)
+		);
+	p2 = T * pnt;
+	if (p2.at<double>(2, 0) > 0.) {
+		R = R2;
 		t = -t;
 		return;
 	}
@@ -449,41 +459,41 @@ void recover2CameraPose(const cv::Mat& R1, const cv::Mat& R2, cv::Mat& R, cv::Ma
 	}
 
 	T = (cv::Mat_<double>(3, 4) <<
-		R2.at<double>(0, 0), R2.at<double>(0, 1), R2.at<double>(0, 2), -t.at<double>(0, 0),
-		R2.at<double>(1, 0), R2.at<double>(1, 1), R2.at<double>(1, 2), -t.at<double>(1, 0),
-		R2.at<double>(2, 0), R2.at<double>(2, 1), R2.at<double>(2, 2), -t.at<double>(2, 0)
+		R1.at<double>(0, 0), R1.at<double>(0, 1), R1.at<double>(0, 2), t.at<double>(0, 0),
+		R1.at<double>(1, 0), R1.at<double>(1, 1), R1.at<double>(1, 2), t.at<double>(1, 0),
+		R1.at<double>(2, 0), R1.at<double>(2, 1), R1.at<double>(2, 2), t.at<double>(2, 0)
 		);
 	p2 = T * pnt;
 	if (p2.at<double>(2, 0) > 0.) {
-		R = R2;
-		t = -t;
+		R = R1;
+		t = t;
 		return;
 	}
 }
 
 
 
-void pose_estimation_2d2d(std::vector<cv::Point2f>& points1, std::vector<cv::Point2f>& points2,const cv::Mat& K1,const cv::Mat& K2, cv::Mat& R, cv::Mat& t)
+void pose_estimation_2d2d(std::vector<uchar>& m_RANSACStatus, std::vector<cv::Point2f>& points1, std::vector<cv::Point2f>& points2,const cv::Mat& K1,const cv::Mat& K2, cv::Mat& R, cv::Mat& t)
 {
 	//-- 计算基础矩阵
 	cv::Mat fundamental_matrix;
 	cv::Mat essential_matrix; 
-	std::vector<uchar> m_RANSACStatus;
-	fundamental_matrix = cv::findFundamentalMat(points1, points2, m_RANSACStatus, cv::FM_RANSAC, .01);
-	for (size_t i = 0; i < m_RANSACStatus.size(); )
-	{
-		if (!m_RANSACStatus[i]) {
-			m_RANSACStatus.erase(m_RANSACStatus.begin() + i);
-			points1.erase(points1.begin() + i);
-			points2.erase(points2.begin() + i);
-		}
-		else {
-			i++;
-		}
-	}
+	fundamental_matrix = cv::findFundamentalMat(points1, points2, m_RANSACStatus, cv::FM_RANSAC,1.);
+	//for (size_t i = 0; i < m_RANSACStatus.size(); )
+	//{
+	//	if (!m_RANSACStatus[i]) {
+
+	//		/*m_RANSACStatus.erase(m_RANSACStatus.begin() + i);
+	//		points1.erase(points1.begin() + i);
+	//		points2.erase(points2.begin() + i);*/
+	//	}
+	//	else {
+	//		i++;
+	//	}
+	//}
 	if (points1.size() < 8)
 		assert(false && "[INFO] matched points cannot less than 8.");
-	fundamental_matrix = cv::findFundamentalMat(points1, points2, cv::FM_RANSAC);
+	//fundamental_matrix = cv::findFundamentalMat(points1, points2, cv::FM_RANSAC);
 
 	//-- 计算本质矩阵
 	essential_matrix = (K2.t() * fundamental_matrix * K1);
@@ -491,9 +501,22 @@ void pose_estimation_2d2d(std::vector<cv::Point2f>& points1, std::vector<cv::Poi
 	cv::Mat R1, R2;
 	cv::decomposeEssentialMat(essential_matrix, R1, R2, t);
 	recover2CameraPose(R1, R2, R, t);
+	std::cout << "R1: " << R1 << std::endl;
+	std::cout << "R2: " << R2 << std::endl;
+	std::cout << "t: " << t << std::endl;
+
+	/*R = (cv::Mat_<double>(3, 3) <<
+		1.,0.,0.,
+		0.,1.,0.,
+		0.,0.,1.
+		);
+	t = (cv::Mat_<double>(3, 1) <<
+		1., 0., 0.
+		);*/
 	
 	std::cout << "R: " << R << std::endl;
 	std::cout << "t: " << t << std::endl;
+
 	////-- 从本质矩阵中恢复旋转和平移信息.
 	//cv::Mat _R, _t;
 	//double focal_length = K1.at<double>(0,0);
@@ -506,14 +529,42 @@ void pose_estimation_2d2d(std::vector<cv::Point2f>& points1, std::vector<cv::Poi
 }
 
 
-void pose_estimate(const cv::Mat& img_1,const cv::Mat& img_2,const cv::Mat& K1, const cv::Mat& K2, cv::Mat& init_R,cv::Mat& init_t, cv::Mat& opt_R, cv::Mat& opt_t)
+
+void pose_estimate(const cv::Mat& img_1,const cv::Mat& img_2,const cv::Mat& K1, const cv::Mat& K2, cv::Mat& init_R,cv::Mat& init_t, cv::Mat& opt_R, cv::Mat& opt_t, std::string str_)
 {
 	std::vector<cv::Point2f> keypoints_1, keypoints_2;
-	find_feature_matches(img_1, img_2, keypoints_1, keypoints_2);
+	std::vector<uchar> m_RANSACStatus;
+	find_feature_matches(img_1, img_2, keypoints_1, keypoints_2,str_);
 	//-- 估计两张图像间运动
-	pose_estimation_2d2d(keypoints_1, keypoints_2, K1, K2, init_R, init_t);
+	pose_estimation_2d2d(m_RANSACStatus, keypoints_1, keypoints_2, K1, K2, init_R, init_t);
+
+	cv::Mat result(img_1.rows, img_1.cols + img_2.cols + 1, img_1.type());
+	img_1.colRange(0, img_1.cols).copyTo(result.colRange(0, img_1.cols));
+	img_2.colRange(0, img_2.cols).copyTo(result.colRange(img_2.cols + 1, result.cols));
+
+	int match_cnt = 0;
+	for (size_t i = 0; i < m_RANSACStatus.size(); )
+	{
+		if (m_RANSACStatus[i]) {
+			cv::Point2f pt2(keypoints_2[i].x + img_1.cols + 1, keypoints_2[i].y);
+			cv::line(result, keypoints_1[i], pt2, cv::Scalar(255, 0, 0), 2);
+			match_cnt++;
+			/*m_RANSACStatus.erase(m_RANSACStatus.begin() + i);
+			points1.erase(points1.begin() + i);
+			points2.erase(points2.begin() + i);*/
+		}
+		i++;
+	}
+	std::cout << "Matched points count: " << match_cnt << std::endl;
+
+	cv::imwrite(str_ + "match again.jpg", result);
+	cv::namedWindow("match again", 0);
+	cv::resizeWindow("match again", result.cols / 2., result.rows / 2.);
+	cv::imshow("match again", result);
+	cv::waitKey(30000);
+
 	init_R.copyTo(opt_R); init_t.copyTo(opt_t);
-	epipolarOptimize(keypoints_1, keypoints_2, K1, K2, init_R, init_t, opt_R, opt_t);
+	epipolarOptimize(m_RANSACStatus, keypoints_1, keypoints_2, K1, K2, init_R, init_t, opt_R, opt_t);
 }
 
 
