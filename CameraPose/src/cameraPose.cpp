@@ -393,10 +393,11 @@ void find_feature_matches(const cv::Mat& img_1, const cv::Mat& img_2, std::vecto
 
 	cv::imwrite(str_ + ".imageMatches.jpg", imageMatches);
 
-	cv::namedWindow("imageMatches", 0);
-	cv::resizeWindow("imageMatches", imageMatches.cols / 2., imageMatches.rows / 2.);
-	cv::imshow("imageMatches",imageMatches);
-	cv::waitKey(30000);
+	cv::namedWindow(str_ + "imageMatches", 0);
+	cv::resizeWindow(str_ + "imageMatches", imageMatches.cols / 2., imageMatches.rows / 2.);
+	cv::imshow(str_ + "imageMatches",imageMatches);
+	cv::waitKey(10000);
+	cv::destroyWindow(str_ + "imageMatches");
 
 	//-- 把匹配点转换为vector<cv::Point2f>的形式
 
@@ -417,57 +418,167 @@ cv::Point2d pixel2cam(const cv::Point2d&p, const cv::Mat& K)
 		(p.y - K.at<double>(1, 2)) / K.at<double>(1, 1)
 	);
 }
-void recover2CameraPose(const cv::Mat& R1, const cv::Mat& R2, cv::Mat& R, cv::Mat& t) {
-	cv::Mat p2;
-	cv::Mat T;
-	cv::Mat pnt = (cv::Mat_<double>(4, 1) << 1., 1., 1., 1.);
+
+
+
+int recover2CameraPose(cv::InputArray E, cv::InputArray _points1, cv::InputArray _points2, cv::InputArray _cameraMatrix1, cv::InputArray _cameraMatrix2,
+	cv::OutputArray _R, cv::OutputArray _t, cv::InputOutputArray _mask)
+{
+
+	cv::Mat points1, points2, cameraMatrix1, cameraMatrix2;
+	_points1.getMat().convertTo(points1, CV_64F);
+	_points2.getMat().convertTo(points2, CV_64F);
+	_cameraMatrix1.getMat().convertTo(cameraMatrix1, CV_64F);
+	_cameraMatrix2.getMat().convertTo(cameraMatrix2, CV_64F);
 	
-	T = (cv::Mat_<double>(3, 4) <<
-		R1.at<double>(0, 0), R1.at<double>(0, 1), R1.at<double>(0, 2), -t.at<double>(0, 0),
-		R1.at<double>(1, 0), R1.at<double>(1, 1), R1.at<double>(1, 2), -t.at<double>(1, 0),
-		R1.at<double>(2, 0), R1.at<double>(2, 1), R1.at<double>(2, 2), -t.at<double>(2, 0)
-		);
-	p2 = T * pnt;
-	if (p2.at<double>(2, 0) > 0.) {
-		R = R1;
+	int npoints = points1.checkVector(2);
+	CV_Assert(npoints >= 0 && points2.checkVector(2) == npoints &&
+		points1.type() == points2.type());
+
+	CV_Assert(cameraMatrix1.rows == 3 && cameraMatrix1.cols == 3 && cameraMatrix1.channels() == 1
+		&& cameraMatrix2.rows == 3 && cameraMatrix2.cols == 3 && cameraMatrix2.channels() == 1);
+
+	if (points1.channels() > 1)
+	{
+		points1 = points1.reshape(1, npoints);
+		points2 = points2.reshape(1, npoints);
+	}
+
+	double fx1 = cameraMatrix1.at<double>(0, 0);
+	double fy1 = cameraMatrix1.at<double>(1, 1);
+	double cx1 = cameraMatrix1.at<double>(0, 2);
+	double cy1 = cameraMatrix1.at<double>(1, 2);
+
+	double fx2 = cameraMatrix2.at<double>(0, 0);
+	double fy2 = cameraMatrix2.at<double>(1, 1);
+	double cx2 = cameraMatrix2.at<double>(0, 2);
+	double cy2 = cameraMatrix2.at<double>(1, 2);
+
+	points1.col(0) = (points1.col(0) - cx1) / fx1;
+	points2.col(0) = (points2.col(0) - cx2) / fx2;
+	points1.col(1) = (points1.col(1) - cy1) / fy1;
+	points2.col(1) = (points2.col(1) - cy2) / fy2;
+
+	points1 = points1.t();
+	points2 = points2.t();
+
+	cv::Mat R1, R2, t;
+	decomposeEssentialMat(E, R1, R2, t);
+	cv::Mat P0 = cv::Mat::eye(3, 4, R1.type());
+	cv::Mat P1(3, 4, R1.type()), P2(3, 4, R1.type()), P3(3, 4, R1.type()), P4(3, 4, R1.type());
+	P1(cv::Range::all(), cv::Range(0, 3)) = R1 * 1.0; P1.col(3) = t * 1.0;
+	P2(cv::Range::all(), cv::Range(0, 3)) = R2 * 1.0; P2.col(3) = t * 1.0;
+	P3(cv::Range::all(), cv::Range(0, 3)) = R1 * 1.0; P3.col(3) = -t * 1.0;
+	P4(cv::Range::all(), cv::Range(0, 3)) = R2 * 1.0; P4.col(3) = -t * 1.0;
+
+	// Do the cheirality check.
+	// Notice here a threshold dist is used to filter
+	// out far away points (i.e. infinite points) since
+	// there depth may vary between postive and negtive.
+	double dist = 50.0;
+	cv::Mat Q;
+	triangulatePoints(P0, P1, points1, points2, Q);
+	cv::Mat mask1 = Q.row(2).mul(Q.row(3)) > 0;
+	Q.row(0) /= Q.row(3);
+	Q.row(1) /= Q.row(3);
+	Q.row(2) /= Q.row(3);
+	Q.row(3) /= Q.row(3);
+	mask1 = (Q.row(2) < dist) & mask1;
+	Q = P1 * Q;
+	mask1 = (Q.row(2) > 0) & mask1;
+	mask1 = (Q.row(2) < dist) & mask1;
+
+	triangulatePoints(P0, P2, points1, points2, Q);
+	cv::Mat mask2 = Q.row(2).mul(Q.row(3)) > 0;
+	Q.row(0) /= Q.row(3);
+	Q.row(1) /= Q.row(3);
+	Q.row(2) /= Q.row(3);
+	Q.row(3) /= Q.row(3);
+	mask2 = (Q.row(2) < dist) & mask2;
+	Q = P2 * Q;
+	mask2 = (Q.row(2) > 0) & mask2;
+	mask2 = (Q.row(2) < dist) & mask2;
+
+	triangulatePoints(P0, P3, points1, points2, Q);
+	cv::Mat mask3 = Q.row(2).mul(Q.row(3)) > 0;
+	Q.row(0) /= Q.row(3);
+	Q.row(1) /= Q.row(3);
+	Q.row(2) /= Q.row(3);
+	Q.row(3) /= Q.row(3);
+	mask3 = (Q.row(2) < dist) & mask3;
+	Q = P3 * Q;
+	mask3 = (Q.row(2) > 0) & mask3;
+	mask3 = (Q.row(2) < dist) & mask3;
+
+	triangulatePoints(P0, P4, points1, points2, Q);
+	cv::Mat mask4 = Q.row(2).mul(Q.row(3)) > 0;
+	Q.row(0) /= Q.row(3);
+	Q.row(1) /= Q.row(3);
+	Q.row(2) /= Q.row(3);
+	Q.row(3) /= Q.row(3);
+	mask4 = (Q.row(2) < dist) & mask4;
+	Q = P4 * Q;
+	mask4 = (Q.row(2) > 0) & mask4;
+	mask4 = (Q.row(2) < dist) & mask4;
+
+	mask1 = mask1.t();
+	mask2 = mask2.t();
+	mask3 = mask3.t();
+	mask4 = mask4.t();
+
+	// If _mask is given, then use it to filter outliers.
+	if (!_mask.empty())
+	{
+		cv::Mat mask = _mask.getMat();
+		CV_Assert(mask.size() == mask1.size());
+		bitwise_and(mask, mask1, mask1);
+		bitwise_and(mask, mask2, mask2);
+		bitwise_and(mask, mask3, mask3);
+		bitwise_and(mask, mask4, mask4);
+	}
+	if (_mask.empty() && _mask.needed())
+	{
+		_mask.create(mask1.size(), CV_8U);
+	}
+
+	CV_Assert(_R.needed() && _t.needed());
+	_R.create(3, 3, R1.type());
+	_t.create(3, 1, t.type());
+
+	int good1 = countNonZero(mask1);
+	int good2 = countNonZero(mask2);
+	int good3 = countNonZero(mask3);
+	int good4 = countNonZero(mask4);
+
+	if (good1 >= good2 && good1 >= good3 && good1 >= good4)
+	{
+		R1.copyTo(_R);
+		t.copyTo(_t);
+		if (_mask.needed()) mask1.copyTo(_mask);
+		return good1;
+	}
+	else if (good2 >= good1 && good2 >= good3 && good2 >= good4)
+	{
+		R2.copyTo(_R);
+		t.copyTo(_t);
+		if (_mask.needed()) mask2.copyTo(_mask);
+		return good2;
+	}
+	else if (good3 >= good1 && good3 >= good2 && good3 >= good4)
+	{
 		t = -t;
-		return;
+		R1.copyTo(_R);
+		t.copyTo(_t);
+		if (_mask.needed()) mask3.copyTo(_mask);
+		return good3;
 	}
-
-	T = (cv::Mat_<double>(3, 4) <<
-		R2.at<double>(0, 0), R2.at<double>(0, 1), R2.at<double>(0, 2), -t.at<double>(0, 0),
-		R2.at<double>(1, 0), R2.at<double>(1, 1), R2.at<double>(1, 2), -t.at<double>(1, 0),
-		R2.at<double>(2, 0), R2.at<double>(2, 1), R2.at<double>(2, 2), -t.at<double>(2, 0)
-		);
-	p2 = T * pnt;
-	if (p2.at<double>(2, 0) > 0.) {
-		R = R2;
+	else
+	{
 		t = -t;
-		return;
-	}
-
-	T = (cv::Mat_<double>(3, 4) <<
-		R2.at<double>(0, 0), R2.at<double>(0, 1), R2.at<double>(0, 2), t.at<double>(0, 0),
-		R2.at<double>(1, 0), R2.at<double>(1, 1), R2.at<double>(1, 2), t.at<double>(1, 0),
-		R2.at<double>(2, 0), R2.at<double>(2, 1), R2.at<double>(2, 2), t.at<double>(2, 0)
-		);
-	p2 = T * pnt;
-	if (p2.at<double>(2, 0) > 0.) {
-		R = R2;
-		t = t;
-		return;
-	}
-
-	T = (cv::Mat_<double>(3, 4) <<
-		R1.at<double>(0, 0), R1.at<double>(0, 1), R1.at<double>(0, 2), t.at<double>(0, 0),
-		R1.at<double>(1, 0), R1.at<double>(1, 1), R1.at<double>(1, 2), t.at<double>(1, 0),
-		R1.at<double>(2, 0), R1.at<double>(2, 1), R1.at<double>(2, 2), t.at<double>(2, 0)
-		);
-	p2 = T * pnt;
-	if (p2.at<double>(2, 0) > 0.) {
-		R = R1;
-		t = t;
-		return;
+		R2.copyTo(_R);
+		t.copyTo(_t);
+		if (_mask.needed()) mask4.copyTo(_mask);
+		return good4;
 	}
 }
 
@@ -497,13 +608,14 @@ void pose_estimation_2d2d(std::vector<uchar>& m_RANSACStatus, std::vector<cv::Po
 
 	//-- 计算本质矩阵
 	essential_matrix = (K2.t() * fundamental_matrix * K1);
+	recover2CameraPose(essential_matrix, points1, points2, K1, K2, R, t, cv::noArray());
 
-	cv::Mat R1, R2;
+	/*cv::Mat R1, R2;
 	cv::decomposeEssentialMat(essential_matrix, R1, R2, t);
 	recover2CameraPose(R1, R2, R, t);
 	std::cout << "R1: " << R1 << std::endl;
 	std::cout << "R2: " << R2 << std::endl;
-	std::cout << "t: " << t << std::endl;
+	std::cout << "t: " << t << std::endl;*/
 
 	/*R = (cv::Mat_<double>(3, 3) <<
 		1.,0.,0.,
@@ -557,11 +669,13 @@ void pose_estimate(const cv::Mat& img_1,const cv::Mat& img_2,const cv::Mat& K1, 
 	}
 	std::cout << "Matched points count: " << match_cnt << std::endl;
 
-	cv::imwrite(str_ + "match again.jpg", result);
-	cv::namedWindow("match again", 0);
-	cv::resizeWindow("match again", result.cols / 2., result.rows / 2.);
-	cv::imshow("match again", result);
-	cv::waitKey(30000);
+	cv::imwrite(str_ + ".matchAgain.jpg", result);
+	cv::namedWindow(str_ + "matchAgain", 0);
+	cv::resizeWindow(str_ + "matchAgain", result.cols / 2., result.rows / 2.);
+	cv::imshow(str_ + "matchAgain", result);
+	cv::waitKey(10000);
+
+	cv::destroyWindow(str_ + "matchAgain");
 
 	init_R.copyTo(opt_R); init_t.copyTo(opt_t);
 	epipolarOptimize(m_RANSACStatus, keypoints_1, keypoints_2, K1, K2, init_R, init_t, opt_R, opt_t);

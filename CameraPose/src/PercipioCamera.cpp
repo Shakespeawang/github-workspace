@@ -74,8 +74,7 @@ int main(int argc, char* argv[])
 
 	/*int argc = 7;
 	char * argv[] = { "", "-exe", "F:\\VS-workspace\\BinocularCalibration\\Debug\\BinocularCalibration.exe",
-		"-K","F:\\VS-workspace\\BinocularCalibration\\TestData\\IR_left.yaml","F:\\VS-workspace\\BinocularCalibration\\TestData\\IR_right.yaml"
-		,"IR"
+		"-K","F:\\VS-workspace\\BinocularCalibration\\TestData\\IR_left.yaml","IR"
 	};*/
 
 	for (int i = 1; i < argc; i++) {
@@ -92,11 +91,11 @@ int main(int argc, char* argv[])
 		else if (strcmp(argv[i], "-K") == 0) {
 			LaunchStr += " -K ";
 			LaunchStr = LaunchStr + " " + argv[++i] + " ";
-			LaunchStr = LaunchStr + " " + argv[++i] + " ";
+			//LaunchStr = LaunchStr + " " + argv[++i] + " ";
 		}
 		else if (strcmp(argv[i], "-h") == 0) {
 			LOGI("Usage: SimpleView_Callback [-h] [-ip <IP>]");
-			LOGI("Usage: SimpleView_Callback -exe exePath -K K1.yaml K2.yaml color");
+			LOGI("Usage: SimpleView_Callback -exe exePath -K K.yaml color");
 			return 0;
 		}
 		else {
@@ -240,6 +239,7 @@ int main(int argc, char* argv[])
 				}
 				if (color_cnt >= 2) {
 					tmp_launch_str += " " + std::to_string(cb_data.saveIdx) + "_color.jpg ";
+					tmp_launch_str += " -idx " + std::to_string(cb_data.saveIdx) + " ";
 					int ret = (int)ShellExecuteA(NULL, ("open"), exe_path.c_str(), tmp_launch_str.c_str(), NULL, SW_NORMAL);//打开exe
 					if (ret < 32)//检测是否指定成功
 						MessageBoxA(NULL, "Shell Execute Error!", "Error", 0);
@@ -250,6 +250,7 @@ int main(int argc, char* argv[])
 				tmp_launch_str = LaunchStr;
 				tmp_launch_str += " -img " + std::to_string(cb_data.saveIdx) + "_leftIR.jpg "
 					+ std::to_string(cb_data.saveIdx) + "_rightIR.jpg ";
+				tmp_launch_str += " -idx " + std::to_string(cb_data.saveIdx) + " ";
 				int ret = (int)ShellExecuteA(NULL, ("open"), exe_path.c_str(), tmp_launch_str.c_str(), NULL, SW_NORMAL);//打开exe
 				if (ret < 32)//检测是否指定成功
 					MessageBoxA(NULL, "Shell Execute Error!", "Error", 0);
