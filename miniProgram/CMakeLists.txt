@@ -3,4 +3,4 @@ project(miniProgram)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(miniProgram main.cpp)
+add_executable(miniProgram combination/src/main.cpp combination/src/MakeRank.cpp combination/include/MakeRank.h)
